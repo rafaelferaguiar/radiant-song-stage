@@ -205,6 +205,7 @@ function Studio() {
   };
 
   const previewSlide = deck[previewIndex] ?? null;
+  const nextSlide = deck[previewIndex + 1] ?? null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-stage">
@@ -397,6 +398,9 @@ function Studio() {
                     {previewIndex + 1}/{deck.length}
                   </span>
                 ) : null}
+              </p>
+              <p className="hidden min-w-0 flex-1 truncate text-xs text-muted-foreground md:block">
+                {nextSlide ? `Próximo: ${nextSlide.lines[0] ?? nextSlide.label ?? ""}` : ""}
               </p>
               <div className="flex gap-1">
                 <Button variant="secondary" size="icon" onClick={() => step(-1)} disabled={!deck.length}>
