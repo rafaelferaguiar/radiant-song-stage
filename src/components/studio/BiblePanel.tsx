@@ -30,7 +30,7 @@ interface BiblePanelProps {
   versesPerSlide: number;
   onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
   onSendSlide: (slide: ProjectionSlide) => void;
-  onAddToSetlist?: (title: string, payload: Record<string, unknown>) => void;
+  onAddToSetlist?: (title: string, payload: JsonObject) => void;
 }
 
 export function BiblePanel({ versesPerSlide, onOpenDeck, onSendSlide, onAddToSetlist }: BiblePanelProps) {
