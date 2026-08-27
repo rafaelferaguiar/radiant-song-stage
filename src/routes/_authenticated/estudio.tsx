@@ -257,8 +257,23 @@ function Studio() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_minmax(0,22rem)]">
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-1 gap-3 p-3",
+          leftOpen && rightOpen && "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_minmax(0,22rem)]",
+          leftOpen && !rightOpen && "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_3rem]",
+          !leftOpen && rightOpen && "lg:grid-cols-[3rem_minmax(0,1fr)_minmax(0,22rem)]",
+          !leftOpen && !rightOpen && "lg:grid-cols-[3rem_minmax(0,1fr)_3rem]",
+        )}
+      >
+        {leftOpen ? (
         <section className="panel flex min-h-0 flex-col p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Biblioteca</span>
+            <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setLeftOpen(false)}>
+              <PanelLeftClose className="size-4" />
+            </Button>
+          </div>
           <Tabs defaultValue="musicas" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="musicas">
@@ -336,6 +351,16 @@ function Studio() {
             </TabsContent>
           </Tabs>
         </section>
+        ) : (
+          <section className="panel flex min-h-0 flex-col items-center gap-2 p-2">
+            <Button variant="ghost" size="icon" title="Expandir biblioteca" onClick={() => setLeftOpen(true)}>
+              <PanelLeftOpen className="size-4" />
+            </Button>
+            <span className="mt-1 text-[10px] tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+              BIBLIOTECA
+            </span>
+          </section>
+        )}
 
         <section className="flex min-h-0 flex-col gap-3">
           <div className="grid gap-3 md:grid-cols-2">
@@ -416,9 +441,15 @@ function Studio() {
           </div>
         </section>
 
+        {rightOpen ? (
         <section className="panel flex min-h-0 flex-col p-3">
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Palette className="size-3.5" /> Tema e projeção
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <Palette className="size-3.5" /> Tema e projeção
+            </span>
+            <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setRightOpen(false)}>
+              <PanelRightClose className="size-4" />
+            </Button>
           </div>
           <div className="min-h-0 flex-1">
             <ThemePanel
@@ -433,6 +464,16 @@ function Studio() {
             />
           </div>
         </section>
+        ) : (
+          <section className="panel flex min-h-0 flex-col items-center gap-2 p-2">
+            <Button variant="ghost" size="icon" title="Expandir temas" onClick={() => setRightOpen(true)}>
+              <PanelRightOpen className="size-4" />
+            </Button>
+            <span className="mt-1 text-[10px] tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+              TEMA
+            </span>
+          </section>
+        )}
       </div>
     </div>
   );
