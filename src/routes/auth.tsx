@@ -63,7 +63,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Conta criada! Se pedirmos confirmação, verifique seu e-mail.");
+    toast.success("Conta criada! Bem-vindo ao Palco.");
     navigate({ to: "/estudio" });
   };
 
