@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonObject = { [key: string]: JsonValue };
+
 export interface SongRecord {
   id: string;
   title: string;
@@ -28,13 +31,13 @@ export interface SetlistItemRecord {
   position: number;
   kind: string;
   title: string;
-  payload: Record<string, unknown>;
+  payload: JsonObject;
 }
 
 export interface ThemeRecord {
   id: string;
   name: string;
-  config: Record<string, unknown>;
+  config: JsonObject;
   is_default: boolean;
 }
 
@@ -161,7 +164,7 @@ export const addSetlistItem = createServerFn({ method: "POST" })
     setlistId: string;
     kind: string;
     title: string;
-    payload?: Record<string, unknown>;
+    payload?: JsonObject;
     position?: number;
   }) => ({
     setlistId: String(input.setlistId),
@@ -225,7 +228,7 @@ export const listThemes = createServerFn({ method: "GET" })
 
 export const saveTheme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id?: string | null; name: string; config: Record<string, unknown> }) => ({
+  .inputValidator((input: { id?: string | null; name: string; config: JsonObject }) => ({
     id: input.id ?? null,
     name: String(input.name).trim().slice(0, 80) || "Tema",
     config: input.config ?? {},

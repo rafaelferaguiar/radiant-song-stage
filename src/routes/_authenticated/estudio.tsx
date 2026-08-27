@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { addSetlistItem, type SongRecord } from "@/lib/library.functions";
+import { addSetlistItem, type JsonObject, type SongRecord } from "@/lib/library.functions";
 import {
   DEFAULT_THEME,
   publishLiveState,
@@ -181,13 +181,12 @@ function Studio() {
         setlistId: activeSetlistId,
         kind: "song",
         title: song.title,
-        songId: song.id,
-        payload: {},
+        payload: { songId: song.id },
       },
     });
   };
 
-  const addBibleToSetlist = (title: string, payload: Record<string, unknown>) => {
+  const addBibleToSetlist = (title: string, payload: JsonObject) => {
     if (!activeSetlistId) {
       toast.error("Selecione um repertório na aba Repertório");
       return;

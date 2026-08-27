@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteTheme, listThemes, saveTheme } from "@/lib/library.functions";
+import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
 import { DEFAULT_THEME, FONT_OPTIONS, type ThemeConfig } from "@/lib/projection";
 import { useState } from "react";
 
@@ -59,7 +59,7 @@ export function ThemePanel({
   const { data: themes = [] } = useQuery({ queryKey: ["themes"], queryFn: () => fetchThemes() });
 
   const save = useMutation({
-    mutationFn: () => persist({ data: { name, config: theme as unknown as Record<string, unknown> } }),
+    mutationFn: () => persist({ data: { name, config: theme as unknown as JsonObject } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });
       toast.success("Tema salvo");
