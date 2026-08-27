@@ -9,7 +9,16 @@ export interface ProjectionSlide {
   footer?: string;
 }
 
+export type BackgroundKind = "none" | "image" | "video";
+
 export interface ThemeConfig {
+  bgKind: BackgroundKind;
+  bgUrl: string;
+  bgFit: "cover" | "contain";
+  bgLoop: boolean;
+  bgMuted: boolean;
+  bgSpeed: number;
+  bgBlur: number;
   bg: string;
   fg: string;
   accentFg: string;
@@ -30,6 +39,13 @@ export interface ThemeConfig {
 }
 
 export const DEFAULT_THEME: ThemeConfig = {
+  bgKind: "none",
+  bgUrl: "",
+  bgFit: "cover",
+  bgLoop: true,
+  bgMuted: true,
+  bgSpeed: 1,
+  bgBlur: 0,
   bg: "#07090f",
   fg: "#ffffff",
   accentFg: "#f6c46a",

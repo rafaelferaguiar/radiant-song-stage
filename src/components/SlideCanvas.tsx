@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import { cn } from "@/lib/utils";
 import type { ProjectionSlide, ThemeConfig } from "@/lib/projection";
 
@@ -8,6 +10,8 @@ interface SlideCanvasProps {
   showLogo?: boolean;
   logoText?: string;
   className?: string;
+  /** Desative em miniaturas para não rodar vários vídeos ao mesmo tempo. */
+  media?: boolean;
 }
 
 export function SlideCanvas({
@@ -17,8 +21,15 @@ export function SlideCanvas({
   showLogo = false,
   logoText = "",
   className,
+  media = true,
 }: SlideCanvasProps) {
   const empty = !slide || !slide.lines.length;
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.playbackRate = theme.bgSpeed || 1;
+  }, [theme.bgSpeed, theme.bgUrl]);
 
   return (
     <div
@@ -30,6 +41,40 @@ export function SlideCanvas({
         fontFamily: theme.fontFamily,
       }}
     >
+      {!blackout && theme.bgKind !== "none" && theme.bgUrl ? (
+        theme.bgKind === "video" ? (
+          media ? (
+            <video
+              ref={videoRef}
+              key={theme.bgUrl}
+              src={theme.bgUrl}
+              autoPlay
+              loop={theme.bgLoop}
+              muted={theme.bgMuted}
+              playsInline
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{
+                objectFit: theme.bgFit,
+                filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
+              }}
+            />
+          ) : (
+            <div className="pointer-events-none absolute inset-0 bg-black/40" />
+          )
+        ) : (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${theme.bgUrl})`,
+              backgroundSize: theme.bgFit,
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
+            }}
+          />
+        )
+      ) : null}
+
       <div
         className="pointer-events-none absolute inset-0"
         style={{ backgroundColor: "#000", opacity: theme.overlay / 400 }}

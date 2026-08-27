@@ -384,7 +384,7 @@ function Studio() {
                         <span>{index + 1}</span>
                       </div>
                       <div className="aspect-video">
-                        <SlideCanvas slide={slide} theme={theme} />
+                        <SlideCanvas slide={slide} theme={theme} media={false} />
                       </div>
                     </button>
                   ))}

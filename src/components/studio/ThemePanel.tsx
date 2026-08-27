@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/select";
 import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
 import { DEFAULT_THEME, FONT_OPTIONS, type ThemeConfig } from "@/lib/projection";
-import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useRef, useState } from "react";
 
 interface ThemePanelProps {
   theme: ThemeConfig;
@@ -68,6 +69,32 @@ export function ThemePanel({
   });
 
   const set = (patch: Partial<ThemeConfig>) => onChange({ ...theme, ...patch });
+
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadBackground = async (file: File) => {
+    setUploading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth.user?.id;
+      if (!userId) throw new Error("Faça login novamente para enviar arquivos");
+      const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
+      const { error } = await supabase.storage.from("backgrounds").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) throw error;
+      const signed = await supabase.storage.from("backgrounds").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("Falha ao gerar link");
+      set({ bgUrl: signed.data.signedUrl, bgKind: file.type.startsWith("video") ? "video" : "image" });
+      toast.success("Fundo enviado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha no envio");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <ScrollArea className="-mr-2 h-full pr-3">
@@ -198,6 +225,102 @@ export function ThemePanel({
               className="h-8 w-14 cursor-pointer rounded border border-border bg-transparent"
             />
           </Row>
+        </div>
+
+        <div className="space-y-2 border-t border-border/60 pt-2">
+          <Row label="Fundo">
+            <Select
+              value={theme.bgKind}
+              onValueChange={(v) => set({ bgKind: v as ThemeConfig["bgKind"] })}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Cor sólida</SelectItem>
+                <SelectItem value="image">Imagem</SelectItem>
+                <SelectItem value="video">Vídeo</SelectItem>
+              </SelectContent>
+            </Select>
+          </Row>
+
+          {theme.bgKind !== "none" ? (
+            <div className="space-y-2">
+              <Input
+                value={theme.bgUrl}
+                onChange={(e) => set({ bgUrl: e.target.value })}
+                placeholder={theme.bgKind === "video" ? "URL do vídeo (mp4/webm)" : "URL da imagem"}
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload className="size-4" /> {uploading ? "Enviando…" : "Enviar arquivo"}
+                </Button>
+                {theme.bgUrl ? (
+                  <Button variant="ghost" size="icon" onClick={() => set({ bgUrl: "" })} title="Remover fundo">
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={theme.bgKind === "video" ? "video/*" : "image/*"}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void uploadBackground(file);
+                }}
+              />
+              <Row label="Ajuste">
+                <Select value={theme.bgFit} onValueChange={(v) => set({ bgFit: v as ThemeConfig["bgFit"] })}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cover">Preencher</SelectItem>
+                    <SelectItem value="contain">Conter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
+              <Row label={`Desfoque ${theme.bgBlur}px`}>
+                <Slider
+                  className="w-40"
+                  min={0}
+                  max={30}
+                  step={1}
+                  value={[theme.bgBlur]}
+                  onValueChange={([v]) => set({ bgBlur: v ?? theme.bgBlur })}
+                />
+              </Row>
+              {theme.bgKind === "video" ? (
+                <>
+                  <Row label="Loop contínuo">
+                    <Switch checked={theme.bgLoop} onCheckedChange={(v) => set({ bgLoop: v })} />
+                  </Row>
+                  <Row label="Sem áudio (mudo)">
+                    <Switch checked={theme.bgMuted} onCheckedChange={(v) => set({ bgMuted: v })} />
+                  </Row>
+                  <Row label={`Velocidade ${theme.bgSpeed.toFixed(2)}x`}>
+                    <Slider
+                      className="w-40"
+                      min={0.25}
+                      max={2}
+                      step={0.05}
+                      value={[theme.bgSpeed]}
+                      onValueChange={([v]) => set({ bgSpeed: v ?? theme.bgSpeed })}
+                    />
+                  </Row>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="border-t border-border/60 pt-2">
