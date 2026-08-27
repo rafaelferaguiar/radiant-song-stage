@@ -41,6 +41,40 @@ export function SlideCanvas({
         fontFamily: theme.fontFamily,
       }}
     >
+      {!blackout && theme.bgKind !== "none" && theme.bgUrl ? (
+        theme.bgKind === "video" ? (
+          media ? (
+            <video
+              ref={videoRef}
+              key={theme.bgUrl}
+              src={theme.bgUrl}
+              autoPlay
+              loop={theme.bgLoop}
+              muted={theme.bgMuted}
+              playsInline
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{
+                objectFit: theme.bgFit,
+                filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
+              }}
+            />
+          ) : (
+            <div className="pointer-events-none absolute inset-0 bg-black/40" />
+          )
+        ) : (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${theme.bgUrl})`,
+              backgroundSize: theme.bgFit,
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
+            }}
+          />
+        )
+      ) : null}
+
       <div
         className="pointer-events-none absolute inset-0"
         style={{ backgroundColor: "#000", opacity: theme.overlay / 400 }}
