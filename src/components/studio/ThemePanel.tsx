@@ -200,6 +200,102 @@ export function ThemePanel({
           </Row>
         </div>
 
+        <div className="space-y-2 border-t border-border/60 pt-2">
+          <Row label="Fundo">
+            <Select
+              value={theme.bgKind}
+              onValueChange={(v) => set({ bgKind: v as ThemeConfig["bgKind"] })}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Cor sólida</SelectItem>
+                <SelectItem value="image">Imagem</SelectItem>
+                <SelectItem value="video">Vídeo</SelectItem>
+              </SelectContent>
+            </Select>
+          </Row>
+
+          {theme.bgKind !== "none" ? (
+            <div className="space-y-2">
+              <Input
+                value={theme.bgUrl}
+                onChange={(e) => set({ bgUrl: e.target.value })}
+                placeholder={theme.bgKind === "video" ? "URL do vídeo (mp4/webm)" : "URL da imagem"}
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload className="size-4" /> {uploading ? "Enviando…" : "Enviar arquivo"}
+                </Button>
+                {theme.bgUrl ? (
+                  <Button variant="ghost" size="icon" onClick={() => set({ bgUrl: "" })} title="Remover fundo">
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={theme.bgKind === "video" ? "video/*" : "image/*"}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void uploadBackground(file);
+                }}
+              />
+              <Row label="Ajuste">
+                <Select value={theme.bgFit} onValueChange={(v) => set({ bgFit: v as ThemeConfig["bgFit"] })}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cover">Preencher</SelectItem>
+                    <SelectItem value="contain">Conter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
+              <Row label={`Desfoque ${theme.bgBlur}px`}>
+                <Slider
+                  className="w-40"
+                  min={0}
+                  max={30}
+                  step={1}
+                  value={[theme.bgBlur]}
+                  onValueChange={([v]) => set({ bgBlur: v ?? theme.bgBlur })}
+                />
+              </Row>
+              {theme.bgKind === "video" ? (
+                <>
+                  <Row label="Loop contínuo">
+                    <Switch checked={theme.bgLoop} onCheckedChange={(v) => set({ bgLoop: v })} />
+                  </Row>
+                  <Row label="Sem áudio (mudo)">
+                    <Switch checked={theme.bgMuted} onCheckedChange={(v) => set({ bgMuted: v })} />
+                  </Row>
+                  <Row label={`Velocidade ${theme.bgSpeed.toFixed(2)}x`}>
+                    <Slider
+                      className="w-40"
+                      min={0.25}
+                      max={2}
+                      step={0.05}
+                      value={[theme.bgSpeed]}
+                      onValueChange={([v]) => set({ bgSpeed: v ?? theme.bgSpeed })}
+                    />
+                  </Row>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         <div className="border-t border-border/60 pt-2">
           <Row label="Alinhamento">
             <Select value={theme.align} onValueChange={(v) => set({ align: v as ThemeConfig["align"] })}>
