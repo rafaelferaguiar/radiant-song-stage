@@ -43,24 +43,21 @@ export function SlideCanvas({
     >
       {!blackout && theme.bgKind !== "none" && theme.bgUrl ? (
         theme.bgKind === "video" ? (
-          media ? (
-            <video
-              ref={videoRef}
-              key={theme.bgUrl}
-              src={theme.bgUrl}
-              autoPlay
-              loop={theme.bgLoop}
-              muted={theme.bgMuted}
-              playsInline
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              style={{
-                objectFit: theme.bgFit,
-                filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
-              }}
-            />
-          ) : (
-            <div className="pointer-events-none absolute inset-0 bg-black/40" />
-          )
+          <video
+            ref={videoRef}
+            key={`${theme.bgUrl}-${media ? "live" : "still"}`}
+            src={media ? theme.bgUrl : `${theme.bgUrl}#t=0.1`}
+            autoPlay={media}
+            loop={theme.bgLoop}
+            muted={media ? theme.bgMuted : true}
+            playsInline
+            preload={media ? "auto" : "metadata"}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            style={{
+              objectFit: theme.bgFit,
+              filter: theme.bgBlur ? `blur(${theme.bgBlur}px)` : undefined,
+            }}
+          />
         ) : (
           <div
             className="pointer-events-none absolute inset-0"

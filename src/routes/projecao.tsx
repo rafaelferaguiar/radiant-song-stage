@@ -32,7 +32,9 @@ function ProjectionScreen() {
 
   useEffect(() => {
     setState(readLiveState());
-    const unsubscribe = subscribeLiveState(setState);
+    const unsubscribe = subscribeLiveState((next) =>
+      setState((prev) => (prev.freeze && next.freeze ? { ...next, slide: prev.slide } : next)),
+    );
     const timer = window.setTimeout(() => setHint(false), 4000);
     return () => {
       unsubscribe();
