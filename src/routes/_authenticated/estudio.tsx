@@ -80,6 +80,9 @@ function Studio() {
 
   const [activeSetlistId, setActiveSetlistId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState({ title: "Aviso", body: "" });
+  const [freeze, setFreeze] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
   const appendItem = useServerFn(addSetlistItem);
   const addItem = useMutation({
