@@ -13,6 +13,11 @@ import {
   Music4,
   Palette,
   Play,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Snowflake,
   Power,
   Square,
   Type,
@@ -98,13 +103,13 @@ function Studio() {
     () => ({
       slide: liveSlide,
       blackout,
-      freeze: false,
+      freeze,
       showLogo,
       logoText,
       theme,
       updatedAt: Date.now(),
     }),
-    [liveSlide, blackout, showLogo, logoText, theme],
+    [liveSlide, blackout, showLogo, logoText, theme, freeze],
   );
 
   useEffect(() => {
@@ -150,6 +155,8 @@ function Studio() {
         step(-1);
       } else if (event.key.toLowerCase() === "b") {
         setBlackout((v) => !v);
+      } else if (event.key.toLowerCase() === "c") {
+        setFreeze((v) => !v);
       } else if (event.key.toLowerCase() === "l") {
         setShowLogo((v) => !v);
       } else if (event.key === "Escape") {
@@ -207,7 +214,7 @@ function Studio() {
             Palco<span className="text-primary">.</span>
           </Link>
           <span className="hidden text-xs text-muted-foreground md:inline">
-            ← → navega · B blackout · L logo · Esc limpa
+            ← → navega · B blackout · L logo · C congela · Esc limpa
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -224,6 +231,14 @@ function Studio() {
             onClick={() => setShowLogo((v) => !v)}
           >
             <Power className="size-4" /> Abertura
+          </Button>
+          <Button
+            variant={freeze ? "default" : "secondary"}
+            size="sm"
+            title="Congela a imagem na tela de projeção (F)"
+            onClick={() => setFreeze((v) => !v)}
+          >
+            <Snowflake className="size-4" /> Congelar
           </Button>
           <Button size="sm" onClick={openProjection}>
             <Monitor className="size-4" /> Tela de projeção
