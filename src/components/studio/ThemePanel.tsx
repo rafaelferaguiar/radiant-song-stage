@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Save, Trash2, Upload } from "lucide-react";
+import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { SlideCanvas } from "@/components/SlideCanvas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
-import { DEFAULT_THEME, FONT_OPTIONS, type ThemeConfig } from "@/lib/projection";
+import { DEFAULT_THEME, FONT_OPTIONS, type ProjectionSlide, type ThemeConfig } from "@/lib/projection";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useRef, useState } from "react";
+
+const SAMPLE_SLIDE: ProjectionSlide = {
+  id: "theme-preview",
+  kind: "lyrics",
+  title: "Grande é o Senhor",
+  lines: ["Grande é o Senhor", "e muito digno de louvor"],
+  footer: "Salmos 48:1",
+};
+
 
 interface ThemePanelProps {
   theme: ThemeConfig;
