@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import { cn } from "@/lib/utils";
 import type { ProjectionSlide, ThemeConfig } from "@/lib/projection";
 
@@ -8,6 +10,8 @@ interface SlideCanvasProps {
   showLogo?: boolean;
   logoText?: string;
   className?: string;
+  /** Desative em miniaturas para não rodar vários vídeos ao mesmo tempo. */
+  media?: boolean;
 }
 
 export function SlideCanvas({
@@ -17,8 +21,15 @@ export function SlideCanvas({
   showLogo = false,
   logoText = "",
   className,
+  media = true,
 }: SlideCanvasProps) {
   const empty = !slide || !slide.lines.length;
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.playbackRate = theme.bgSpeed || 1;
+  }, [theme.bgSpeed, theme.bgUrl]);
 
   return (
     <div
