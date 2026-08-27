@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Save, Trash2, Upload } from "lucide-react";
+import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { SlideCanvas } from "@/components/SlideCanvas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
-import { DEFAULT_THEME, FONT_OPTIONS, type ThemeConfig } from "@/lib/projection";
+import { DEFAULT_THEME, FONT_OPTIONS, type ProjectionSlide, type ThemeConfig } from "@/lib/projection";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useRef, useState } from "react";
+
+const SAMPLE_SLIDE: ProjectionSlide = {
+  id: "theme-preview",
+  kind: "lyrics",
+  title: "Grande é o Senhor",
+  lines: ["Grande é o Senhor", "e muito digno de louvor"],
+  footer: "Salmos 48:1",
+};
+
 
 interface ThemePanelProps {
   theme: ThemeConfig;
@@ -52,6 +63,8 @@ export function ThemePanel({
   onLogoTextChange,
 }: ThemePanelProps) {
   const [name, setName] = useState("Tema principal");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const fetchThemes = useServerFn(listThemes);
   const persist = useServerFn(saveTheme);
@@ -60,13 +73,17 @@ export function ThemePanel({
   const { data: themes = [] } = useQuery({ queryKey: ["themes"], queryFn: () => fetchThemes() });
 
   const save = useMutation({
-    mutationFn: () => persist({ data: { name, config: theme as unknown as JsonObject } }),
-    onSuccess: () => {
+    mutationFn: () =>
+      persist({ data: { id: editingId, name, config: theme as unknown as JsonObject } }),
+    onSuccess: (row) => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });
-      toast.success("Tema salvo");
+      setSelectedId(row.id);
+      setEditingId(row.id);
+      toast.success(editingId ? "Tema atualizado" : "Tema criado");
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
   const set = (patch: Partial<ThemeConfig>) => onChange({ ...theme, ...patch });
 
@@ -100,48 +117,109 @@ export function ThemePanel({
     <ScrollArea className="-mr-2 h-full pr-3">
       <div className="space-y-4 pb-6">
         <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Temas salvos</Label>
-          <div className="flex gap-2">
-            <Select
-              onValueChange={(id) => {
-                const found = themes.find((t) => t.id === id);
-                if (found) onChange({ ...DEFAULT_THEME, ...(found.config as Partial<ThemeConfig>) });
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs text-muted-foreground">Temas salvos</Label>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                setSelectedId(null);
+                setEditingId(null);
+                setName("Novo tema");
               }}
             >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Carregar tema" />
-              </SelectTrigger>
-              <SelectContent>
-                {themes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {themes.length ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive"
-                onClick={async () => {
-                  const last = themes[themes.length - 1]!;
-                  await remove({ data: { id: last.id } });
-                  queryClient.invalidateQueries({ queryKey: ["themes"] });
-                }}
-                title="Excluir último tema salvo"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <Plus className="size-3.5" /> Novo
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {themes.map((t) => {
+              const config = { ...DEFAULT_THEME, ...(t.config as Partial<ThemeConfig>) };
+              const active = selectedId === t.id;
+              return (
+                <div
+                  key={t.id}
+                  className={cn(
+                    "group relative overflow-hidden rounded-lg border transition-colors",
+                    active ? "border-primary ring-1 ring-primary/50" : "border-border/60 hover:border-primary/50",
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="block w-full text-left"
+                    onClick={() => {
+                      setSelectedId(t.id);
+                      setEditingId(null);
+                      setName(t.name);
+                      onChange(config);
+                    }}
+                    title={`Usar “${t.name}”`}
+                  >
+                    <div className="aspect-video">
+                      <SlideCanvas slide={SAMPLE_SLIDE} theme={config} media={false} />
+                    </div>
+                    <p className="truncate px-2 py-1 text-[11px] text-muted-foreground">{t.name}</p>
+                  </button>
+                  <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="size-6"
+                      title="Editar tema"
+                      onClick={() => {
+                        setSelectedId(t.id);
+                        setEditingId(t.id);
+                        setName(t.name);
+                        onChange(config);
+                      }}
+                    >
+                      <Pencil className="size-3" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="size-6 text-destructive"
+                      title="Excluir tema"
+                      onClick={async () => {
+                        await remove({ data: { id: t.id } });
+                        if (selectedId === t.id) setSelectedId(null);
+                        if (editingId === t.id) setEditingId(null);
+                        queryClient.invalidateQueries({ queryKey: ["themes"] });
+                        toast.success("Tema excluído");
+                      }}
+                    >
+                      <Trash2 className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            {!themes.length ? (
+              <p className="col-span-2 rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
+                Ajuste o tema abaixo e salve para criar seu primeiro preset.
+              </p>
             ) : null}
           </div>
+
           <div className="flex gap-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do tema" />
-            <Button size="icon" onClick={() => save.mutate()} title="Salvar tema atual">
+            <Button
+              size="icon"
+              disabled={save.isPending}
+              onClick={() => save.mutate()}
+              title={editingId ? "Salvar alterações" : "Salvar como novo tema"}
+            >
               <Save className="size-4" />
             </Button>
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            {editingId
+              ? "Editando o tema selecionado — as mudanças abaixo serão gravadas nele."
+              : "Salvar cria um novo tema com os ajustes atuais."}
+          </p>
         </div>
+
 
         <div className="border-t border-border/60 pt-2">
           <Row label="Fonte">
