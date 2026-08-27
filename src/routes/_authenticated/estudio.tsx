@@ -38,7 +38,7 @@ import {
   type ProjectionSlide,
   type ThemeConfig,
 } from "@/lib/projection";
-import { buildSongSlides, buildTextSlides } from "@/lib/slides";
+import { buildTextSlides } from "@/lib/slides";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -420,5 +420,3 @@ function Studio() {
     </div>
   );
 }
-
-export { buildSongSlides };
