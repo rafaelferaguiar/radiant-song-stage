@@ -49,7 +49,7 @@ export function SlideCanvas({
             src={media ? theme.bgUrl : `${theme.bgUrl}#t=0.1`}
             autoPlay={media}
             loop={theme.bgLoop}
-            muted
+            muted={media ? theme.bgMuted : true}
             playsInline
             preload={media ? "auto" : "metadata"}
             className="pointer-events-none absolute inset-0 h-full w-full"
