@@ -63,6 +63,8 @@ export function ThemePanel({
   onLogoTextChange,
 }: ThemePanelProps) {
   const [name, setName] = useState("Tema principal");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const fetchThemes = useServerFn(listThemes);
   const persist = useServerFn(saveTheme);
@@ -71,13 +73,17 @@ export function ThemePanel({
   const { data: themes = [] } = useQuery({ queryKey: ["themes"], queryFn: () => fetchThemes() });
 
   const save = useMutation({
-    mutationFn: () => persist({ data: { name, config: theme as unknown as JsonObject } }),
-    onSuccess: () => {
+    mutationFn: () =>
+      persist({ data: { id: editingId, name, config: theme as unknown as JsonObject } }),
+    onSuccess: (row) => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });
-      toast.success("Tema salvo");
+      setSelectedId(row.id);
+      setEditingId(row.id);
+      toast.success(editingId ? "Tema atualizado" : "Tema criado");
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
   const set = (patch: Partial<ThemeConfig>) => onChange({ ...theme, ...patch });
 
