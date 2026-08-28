@@ -38,10 +38,11 @@ export function renderLoop(
       const r = 2 + fract(seed * 2.34) * 5;
       const x = (sx * w + (t * 20) * (0.5 + fract(seed * 0.345))) % w;
       const y = (sy * h + Math.sin(t + seed) * 40) % h;
+      const color = colors[i % colors.length] ?? theme.fg ?? "#ffffff";
       const alpha = 0.3 + 0.5 * Math.abs(Math.sin(t * 0.5 + seed));
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = colorWithAlpha(colors[i % colors.length], alpha);
+      ctx.fillStyle = colorWithAlpha(color, alpha);
       ctx.fill();
     }
   }
