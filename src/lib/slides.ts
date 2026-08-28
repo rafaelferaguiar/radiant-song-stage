@@ -1,4 +1,4 @@
-import type { ProjectionSlide } from "./projection";
+import type { ProjectionSlide, ThemeConfig } from "./projection";
 
 export interface LyricSection {
   label: string;
@@ -66,7 +66,7 @@ export interface SectionConfig {
   /** id do tema salvo usado como base desta seção (apenas informativo na UI) */
   themeId?: string | null;
   /** ajustes de tema desta seção */
-  theme?: Record<string, unknown>;
+  theme?: Partial<ThemeConfig>;
 }
 
 export type SectionConfigMap = Record<string, SectionConfig>;
@@ -92,7 +92,7 @@ export function buildSongSlides(song: SongLike, linesPerSlide = 4): ProjectionSl
       config.linesPerSlide && config.linesPerSlide > 0 ? config.linesPerSlide : linesPerSlide;
     const override =
       config.theme && Object.keys(config.theme).length
-        ? (config.theme as ProjectionSlide["themeOverride"])
+        ? config.theme
         : undefined;
     chunk(section.lines, perSlide).forEach((lines, ci) => {
       slides.push({

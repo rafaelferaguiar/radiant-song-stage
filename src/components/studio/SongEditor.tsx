@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 interface SongEditorProps {
   open: boolean;
   song: SongRecord | null;
-  baseTheme?: ThemeConfig;
+  baseTheme?: ThemeConfig | undefined;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -115,7 +115,7 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
     previewSlides.find((s) => s.sectionKey === activeKey) ?? previewSlides[0] ?? null;
 
   const activeConfig = activeKey ? (sections[activeKey] ?? {}) : {};
-  const activeOverride = (activeConfig.theme ?? {}) as Partial<ThemeConfig>;
+  const activeOverride: Partial<ThemeConfig> = activeConfig.theme ?? {};
 
   const patchSection = (patch: Partial<(typeof sections)[string]>) => {
     if (!activeKey) return;
@@ -126,7 +126,7 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
     if (!activeKey) return;
     setSections((prev) => {
       const current = prev[activeKey] ?? {};
-      const theme = { ...(current.theme ?? {}), ...patch } as Record<string, unknown>;
+      const theme: Partial<ThemeConfig> = { ...(current.theme ?? {}), ...patch };
       return { ...prev, [activeKey]: { ...current, theme } };
     });
   };
@@ -175,7 +175,6 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex h-[94vh] w-[97vw] max-w-[1400px] flex-col gap-3 overflow-hidden p-4 sm:max-w-[1400px]"
-        showCloseButton
       >
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -392,7 +391,7 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
                           const found = themes.find((t) => t.id === v);
                           patchSection({
                             themeId: v,
-                            theme: (found?.config ?? {}) as Record<string, unknown>,
+                            theme: (found?.config ?? {}) as Partial<ThemeConfig>,
                           });
                         }}
                       >
