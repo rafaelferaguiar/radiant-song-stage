@@ -9,6 +9,14 @@ export interface ProjectionSlide {
   footer?: string;
 }
 
+export interface DeckMeta {
+  title: string;
+  songKey?: string;
+  bpm?: number | null;
+  notes?: string;
+  durationMin?: number | null;
+}
+
 export type BackgroundKind = "none" | "image" | "video" | "loop";
 export type LoopKind = "none" | "gradient" | "particles" | "waves" | "pulse";
 export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
