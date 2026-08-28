@@ -38,7 +38,7 @@ const SYSTEM_ACTIONS: { label: string; icon: React.ReactNode; action: QuickActio
   { label: "Blackout (B)", icon: <EyeOff className="size-4" />, action: { type: "blackout" }, keywords: "apagar tela escuro blackout" },
   { label: "Tela de abertura (L)", icon: <Monitor className="size-4" />, action: { type: "logo" }, keywords: "logo abertura bem vindo tela inicial" },
   { label: "Congelar / Descongelar (C)", icon: <Layers className="size-4" />, action: { type: "freeze" }, keywords: "congelar freeze segurar travar" },
-  { label: "Limpar slide", icon: <Command className="size-4" />, action: { type: "clear" }, keywords: "limpar vazio slide apagar" },
+  { label: "Limpar slide", icon: <CommandIcon className="size-4" />, action: { type: "clear" }, keywords: "limpar vazio slide apagar" },
   { label: "Abrir projeção", icon: <Tv className="size-4" />, action: { type: "openProjection" }, keywords: "projetar tela projetor segunda tela" },
   { label: "Abrir retorno de palco", icon: <Timer className="size-4" />, action: { type: "openStage" }, keywords: "palco retorno stage monitora" },
 ];
