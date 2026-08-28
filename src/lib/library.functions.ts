@@ -208,13 +208,13 @@ export const updateSetlistItem = createServerFn({ method: "POST" })
     position: Number.isFinite(input.position) ? Math.trunc(input.position as number) : undefined,
   }))
   .handler(async ({ data, context }): Promise<SetlistItemRecord> => {
-    const update: JsonObject = {};
-    if (data.title !== undefined) update.title = data.title;
-    if (data.payload !== undefined) update.payload = data.payload;
-    if (data.position !== undefined) update.position = data.position;
+    const update: Record<string, unknown> = {};
+    if (data.title !== undefined) update["title"] = data.title;
+    if (data.payload !== undefined) update["payload"] = data.payload;
+    if (data.position !== undefined) update["position"] = data.position;
     const { data: row, error } = await context.supabase
       .from("setlist_items")
-      .update(update)
+      .update(update as any)
       .eq("id", data.id)
       .select("id, setlist_id, position, kind, title, payload")
       .single();
