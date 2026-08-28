@@ -158,9 +158,10 @@ export interface StageState {
 
 export interface TimerState {
   serviceStartedAt: number | null;
+  servicePausedAt: number | null;
   itemStartedAt: number | null;
   itemDurationMin: number | null;
-  pausedAt: number | null;
+  itemPausedAt: number | null;
 }
 
 export interface LiveState {
@@ -199,9 +200,10 @@ export const INITIAL_LIVE_STATE: LiveState = {
   },
   timers: {
     serviceStartedAt: null,
+    servicePausedAt: null,
     itemStartedAt: null,
     itemDurationMin: null,
-    pausedAt: null,
+    itemPausedAt: null,
   },
   songKey: "",
   bpm: null,
