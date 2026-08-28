@@ -25,11 +25,11 @@ import {
 } from "@/lib/bible-books";
 import { compareVerse, getChapter, searchVerses } from "@/lib/bible.functions";
 import { buildBibleSlides } from "@/lib/slides";
-import type { ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
 
 interface BiblePanelProps {
   versesPerSlide: number;
-  onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
+  onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
   onSendSlide: (slide: ProjectionSlide) => void;
   onAddToSetlist?: (title: string, payload: JsonObject) => void;
 }
