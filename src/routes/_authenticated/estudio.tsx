@@ -125,10 +125,23 @@ function Studio() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // primeiro slide da próxima seção distinta (usado no retorno de palco)
+  const nextSectionSlide = useMemo(() => {
+    const current = deck[previewIndex];
+    if (!current || current.kind !== "lyrics") return null;
+    const key = current.sectionKey;
+    for (let i = previewIndex + 1; i < deck.length; i++) {
+      const candidate = deck[i];
+      if (candidate && candidate.sectionKey !== key) return candidate;
+    }
+    return null;
+  }, [deck, previewIndex]);
+
   const state: LiveState = useMemo(
     () => ({
       slide: liveSlide,
       next: deck[previewIndex + 1] ?? null,
+      nextSection: nextSectionSlide,
       blackout,
       freeze,
       showLogo,
