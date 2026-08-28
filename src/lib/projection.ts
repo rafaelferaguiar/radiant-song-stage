@@ -1,4 +1,4 @@
-export type SlideKind = "lyrics" | "bible" | "text";
+export type SlideKind = "lyrics" | "bible" | "text" | "media";
 
 export interface ProjectionSlide {
   id: string;
@@ -7,6 +7,10 @@ export interface ProjectionSlide {
   title?: string;
   lines: string[];
   footer?: string;
+  /** mídia projetada em tela cheia (kind === "media") */
+  mediaUrl?: string;
+  mediaKind?: "image" | "video";
+  mediaFit?: "cover" | "contain";
   /** chave normalizada da seção (verso/refrão) a que este slide pertence */
   sectionKey?: string;
   /** tom específico desta seção, quando definido no editor da música */
@@ -50,7 +54,45 @@ export const LOOP_KIND_OPTIONS: { value: LoopKind; label: string }[] = [
 ];
 export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
 
+export type LayerKind = "color" | "image" | "video" | "loop";
+
+export interface ProjectionLayer {
+  id: string;
+  name: string;
+  kind: LayerKind;
+  visible: boolean;
+  opacity: number; // 0-100
+  blend: BlendMode;
+  url?: string;
+  color?: string;
+  fit?: "cover" | "contain";
+  blur?: number;
+  loopKind?: LoopKind;
+  loopColors?: string[];
+  loopSpeed?: number;
+}
+
+export function createLayer(patch: Partial<ProjectionLayer> = {}): ProjectionLayer {
+  return {
+    id: `layer-${Math.random().toString(36).slice(2, 9)}`,
+    name: "Camada",
+    kind: "color",
+    visible: true,
+    opacity: 100,
+    blend: "normal",
+    color: "#1e40af",
+    fit: "cover",
+    blur: 0,
+    loopKind: "gradient",
+    loopColors: ["#1e3a8a", "#7c2d12"],
+    loopSpeed: 1,
+    ...patch,
+  };
+}
+
 export interface ThemeConfig {
+  /** camadas empilhadas entre o fundo e o texto (índice 0 = mais ao fundo) */
+  layers?: ProjectionLayer[];
   bgKind: BackgroundKind;
   bgUrl: string;
   bgFit: "cover" | "contain";
@@ -191,14 +233,35 @@ export interface StageState {
   blink: boolean;
   showNotes: boolean;
   showTimers: boolean;
+  /** relógio no topo do retorno de palco */
+  showClock: boolean;
+  /** timer de duração do culto */
+  showService: boolean;
+}
+
+/** timer nomeado, criado livremente pelo operador (ex: "Pregação") */
+export interface NamedTimer {
+  id: string;
+  name: string;
+  durationMin: number | null;
+  startedAt: number | null;
+  pausedAt: number | null;
+}
+
+export function createNamedTimer(name = "Novo timer", durationMin: number | null = 10): NamedTimer {
+  return {
+    id: `timer-${Math.random().toString(36).slice(2, 9)}`,
+    name,
+    durationMin,
+    startedAt: null,
+    pausedAt: null,
+  };
 }
 
 export interface TimerState {
   serviceStartedAt: number | null;
   servicePausedAt: number | null;
-  itemStartedAt: number | null;
-  itemDurationMin: number | null;
-  itemPausedAt: number | null;
+  items: NamedTimer[];
 }
 
 export interface LiveState {
@@ -237,13 +300,13 @@ export const INITIAL_LIVE_STATE: LiveState = {
     blink: false,
     showNotes: true,
     showTimers: true,
+    showClock: true,
+    showService: true,
   },
   timers: {
     serviceStartedAt: null,
     servicePausedAt: null,
-    itemStartedAt: null,
-    itemDurationMin: null,
-    itemPausedAt: null,
+    items: [],
   },
   songKey: "",
   bpm: null,
@@ -262,7 +325,11 @@ export function readLiveState(): LiveState {
       ...parsed,
       theme: { ...DEFAULT_THEME, ...(parsed.theme ?? {}) },
       stage: { ...INITIAL_LIVE_STATE.stage, ...(parsed.stage ?? {}) },
-      timers: { ...INITIAL_LIVE_STATE.timers, ...(parsed.timers ?? {}) },
+      timers: {
+        ...INITIAL_LIVE_STATE.timers,
+        ...(parsed.timers ?? {}),
+        items: parsed.timers?.items ?? [],
+      },
     };
   } catch {
     return INITIAL_LIVE_STATE;

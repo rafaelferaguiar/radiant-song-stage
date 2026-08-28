@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
-import type { ProjectionSlide, ThemeConfig } from "@/lib/projection";
+import type { ProjectionLayer, ProjectionSlide, ThemeConfig } from "@/lib/projection";
 import { renderLoop } from "@/lib/loops";
 
 interface SlideCanvasProps {
@@ -15,6 +15,92 @@ interface SlideCanvasProps {
   media?: boolean;
 }
 
+function LayerView({ layer, theme, media }: { layer: ProjectionLayer; theme: ThemeConfig; media: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || layer.kind !== "loop") return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.max(1, Math.floor(rect.width * scale));
+      canvas.height = Math.max(1, Math.floor(rect.height * scale));
+    };
+    resize();
+    const layerTheme: ThemeConfig = {
+      ...theme,
+      loopKind: layer.loopKind ?? "gradient",
+      loopColors: layer.loopColors ?? theme.loopColors,
+      loopSpeed: layer.loopSpeed ?? 1,
+    };
+    let raf = 0;
+    if (media) {
+      const tick = (time: number) => {
+        renderLoop(canvas, layerTheme, ctx, time);
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    } else {
+      renderLoop(canvas, layerTheme, ctx, 0);
+    }
+    const onResize = () => resize();
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [layer, theme, media]);
+
+  const style = {
+    opacity: layer.opacity / 100,
+    mixBlendMode: layer.blend === "normal" ? undefined : layer.blend,
+    filter: layer.blur ? `blur(${layer.blur}px)` : undefined,
+  } as React.CSSProperties;
+
+  if (layer.kind === "color") {
+    return (
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ ...style, backgroundColor: layer.color ?? "#000" }}
+      />
+    );
+  }
+  if (layer.kind === "loop") {
+    return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" style={style} />;
+  }
+  if (!layer.url) return null;
+  if (layer.kind === "video") {
+    return (
+      <video
+        key={`${layer.id}-${media ? "live" : "still"}`}
+        src={media ? layer.url : `${layer.url}#t=0.1`}
+        autoPlay={media}
+        loop
+        muted
+        playsInline
+        preload={media ? "auto" : "metadata"}
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        style={{ ...style, objectFit: layer.fit ?? "cover" }}
+      />
+    );
+  }
+  return (
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        ...style,
+        backgroundImage: `url(${layer.url})`,
+        backgroundSize: layer.fit ?? "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
+
 export function SlideCanvas({
   slide,
   theme: baseTheme,
@@ -26,9 +112,11 @@ export function SlideCanvas({
 }: SlideCanvasProps) {
   // cada seção da música pode sobrescrever parte do tema
   const theme = slide?.themeOverride ? { ...baseTheme, ...slide.themeOverride } : baseTheme;
-  const empty = !slide || !slide.lines.length;
+  const isMediaSlide = slide?.kind === "media" && !!slide.mediaUrl;
+  const empty = !slide || (!slide.lines.length && !isMediaSlide);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const layers = theme.layers ?? [];
 
   useEffect(() => {
     const video = videoRef.current;
@@ -122,6 +210,40 @@ export function SlideCanvas({
         style={{ backgroundColor: "#000", opacity: overlayOpacity }}
       />
 
+      {/* camadas empilhadas (fundo → topo), sempre abaixo do texto */}
+      {!blackout
+        ? layers
+            .filter((layer) => layer.visible)
+            .map((layer) => <LayerView key={layer.id} layer={layer} theme={theme} media={media} />)
+        : null}
+
+      {/* mídia projetada em tela cheia */}
+      {!blackout && isMediaSlide ? (
+        slide?.mediaKind === "video" ? (
+          <video
+            key={`${slide.mediaUrl}-${media ? "live" : "still"}`}
+            src={media ? slide.mediaUrl : `${slide.mediaUrl}#t=0.1`}
+            autoPlay={media}
+            loop
+            playsInline
+            muted
+            preload={media ? "auto" : "metadata"}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            style={{ objectFit: slide.mediaFit ?? "contain" }}
+          />
+        ) : (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${slide?.mediaUrl})`,
+              backgroundSize: slide?.mediaFit ?? "contain",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          />
+        )
+      ) : null}
+
       {blackout ? null : showLogo ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <span
@@ -136,7 +258,7 @@ export function SlideCanvas({
             {logoText || "Bem-vindos"}
           </span>
         </div>
-      ) : (
+      ) : isMediaSlide ? null : (
         <div
           className={cn(
             "absolute inset-0 flex flex-col",
