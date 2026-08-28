@@ -7,6 +7,12 @@ export interface ProjectionSlide {
   title?: string;
   lines: string[];
   footer?: string;
+  /** chave normalizada da seção (verso/refrão) a que este slide pertence */
+  sectionKey?: string;
+  /** tom específico desta seção, quando definido no editor da música */
+  songKey?: string;
+  /** ajustes de tema aplicados apenas a este slide/seção */
+  themeOverride?: Partial<ThemeConfig>;
 }
 
 export interface DeckMeta {
