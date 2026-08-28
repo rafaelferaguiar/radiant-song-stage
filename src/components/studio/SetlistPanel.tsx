@@ -94,6 +94,7 @@ export function SetlistPanel({
   });
 
   const openItem = async (item: SetlistItemRecord) => {
+    const durationMin = Number(item.payload["durationMin"]) || null;
     if (item.kind === "song") {
       const songId = String(item.payload["songId"] ?? "");
       const song = songs.find((s) => s.id === songId);
@@ -101,7 +102,16 @@ export function SetlistPanel({
         toast.error("Música não encontrada na biblioteca");
         return;
       }
-      onOpenDeck(song.title, buildSongSlides(song, linesPerSlide));
+      onOpenDeck(
+        {
+          title: song.title,
+          songKey: song.song_key,
+          bpm: song.bpm,
+          notes: song.notes,
+          durationMin,
+        },
+        buildSongSlides(song, linesPerSlide),
+      );
       return;
     }
     if (item.kind === "bible") {
@@ -110,13 +120,16 @@ export function SetlistPanel({
       const chapter = Number(item.payload["chapter"] ?? 1);
       const result = await fetchChapter({ data: { translation, book: bookId, chapter } });
       const label = TRANSLATIONS.find((t) => t.code === translation)?.short ?? translation;
-      onOpenDeck(item.title, buildBibleSlides(formatRef(bookId, chapter), label, result.verses, versesPerSlide));
+      onOpenDeck(
+        { title: item.title, durationMin },
+        buildBibleSlides(formatRef(bookId, chapter), label, result.verses, versesPerSlide),
+      );
       return;
     }
     const lines = String(item.payload["body"] ?? item.title)
       .split("\n")
       .filter(Boolean);
-    onOpenDeck(item.title, [
+    onOpenDeck({ title: item.title, durationMin }, [
       { id: item.id, kind: "text", title: item.title, lines, footer: item.title },
     ]);
   };
