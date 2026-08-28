@@ -54,7 +54,45 @@ export const LOOP_KIND_OPTIONS: { value: LoopKind; label: string }[] = [
 ];
 export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
 
+export type LayerKind = "color" | "image" | "video" | "loop";
+
+export interface ProjectionLayer {
+  id: string;
+  name: string;
+  kind: LayerKind;
+  visible: boolean;
+  opacity: number; // 0-100
+  blend: BlendMode;
+  url?: string;
+  color?: string;
+  fit?: "cover" | "contain";
+  blur?: number;
+  loopKind?: LoopKind;
+  loopColors?: string[];
+  loopSpeed?: number;
+}
+
+export function createLayer(patch: Partial<ProjectionLayer> = {}): ProjectionLayer {
+  return {
+    id: `layer-${Math.random().toString(36).slice(2, 9)}`,
+    name: "Camada",
+    kind: "color",
+    visible: true,
+    opacity: 100,
+    blend: "normal",
+    color: "#1e40af",
+    fit: "cover",
+    blur: 0,
+    loopKind: "gradient",
+    loopColors: ["#1e3a8a", "#7c2d12"],
+    loopSpeed: 1,
+    ...patch,
+  };
+}
+
 export interface ThemeConfig {
+  /** camadas empilhadas entre o fundo e o texto (índice 0 = mais ao fundo) */
+  layers?: ProjectionLayer[];
   bgKind: BackgroundKind;
   bgUrl: string;
   bgFit: "cover" | "contain";
