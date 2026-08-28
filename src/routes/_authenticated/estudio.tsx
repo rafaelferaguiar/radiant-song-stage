@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   BookOpen,
@@ -21,13 +21,17 @@ import {
   Power,
   Square,
   Type,
+  Search,
+  Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SlideCanvas } from "@/components/SlideCanvas";
 import { BiblePanel } from "@/components/studio/BiblePanel";
+import { CommandPalette, type QuickAction } from "@/components/studio/CommandPalette";
 import { SetlistPanel } from "@/components/studio/SetlistPanel";
 import { SongsPanel } from "@/components/studio/SongsPanel";
+import { StagePanel } from "@/components/studio/StagePanel";
 import { ThemePanel } from "@/components/studio/ThemePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,15 +39,21 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { addSetlistItem, type JsonObject, type SongRecord } from "@/lib/library.functions";
+import { addSetlistItem, listSetlists, listSongs, type JsonObject, type SongRecord } from "@/lib/library.functions";
+import { getChapter } from "@/lib/bible.functions";
 import {
   DEFAULT_THEME,
+  INITIAL_LIVE_STATE,
   publishLiveState,
+  type DeckMeta,
   type LiveState,
   type ProjectionSlide,
+  type StageState,
   type ThemeConfig,
+  type TimerState,
 } from "@/lib/projection";
-import { buildTextSlides } from "@/lib/slides";
+import { buildBibleSlides, buildSongSlides, buildTextSlides } from "@/lib/slides";
+import { formatRef, parseReference } from "@/lib/bible-books";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +80,7 @@ function Studio() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projectionWindow = useRef<Window | null>(null);
+  const stageWindow = useRef<Window | null>(null);
 
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [linesPerSlide, setLinesPerSlide] = useState(4);
@@ -89,7 +100,22 @@ function Studio() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
 
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  const [stage, setStage] = useState<StageState>(INITIAL_LIVE_STATE.stage);
+  const [timers, setTimers] = useState<TimerState>(INITIAL_LIVE_STATE.timers);
+  const [songKey, setSongKey] = useState("");
+  const [bpm, setBpm] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
+
+  const fetchSongs = useServerFn(listSongs);
+  const fetchSetlists = useServerFn(listSetlists);
+  const fetchChapter = useServerFn(getChapter);
   const appendItem = useServerFn(addSetlistItem);
+
+  const { data: songs = [] } = useQuery({ queryKey: ["songs"], queryFn: () => fetchSongs() });
+  const { data: setlists = [] } = useQuery({ queryKey: ["setlists"], queryFn: () => fetchSetlists() });
+
   const addItem = useMutation({
     mutationFn: appendItem,
     onSuccess: () => {
@@ -102,24 +128,42 @@ function Studio() {
   const state: LiveState = useMemo(
     () => ({
       slide: liveSlide,
+      next: deck[previewIndex + 1] ?? null,
       blackout,
       freeze,
       showLogo,
       logoText,
       theme,
+      stage,
+      timers,
+      songKey,
+      bpm,
+      notes,
       updatedAt: Date.now(),
     }),
-    [liveSlide, blackout, showLogo, logoText, theme, freeze],
+    [liveSlide, deck, previewIndex, blackout, showLogo, logoText, theme, stage, timers, songKey, bpm, notes, freeze],
   );
 
   useEffect(() => {
     publishLiveState(state);
   }, [state]);
 
-  const openDeck = useCallback((title: string, slides: ProjectionSlide[]) => {
-    setDeckTitle(title);
+  const openDeck = useCallback((meta: DeckMeta, slides: ProjectionSlide[]) => {
+    setDeckTitle(meta.title);
     setDeck(slides);
     setPreviewIndex(0);
+    setSongKey(meta.songKey ?? "");
+    setBpm(meta.bpm ?? null);
+    setNotes(meta.notes ?? "");
+    // inicia automaticamente o timer do item se houver duração
+    if (meta.durationMin && meta.durationMin > 0) {
+      setTimers((prev) => ({
+        ...prev,
+        itemStartedAt: Date.now(),
+        itemDurationMin: meta.durationMin ?? null,
+        itemPausedAt: null,
+      }));
+    }
   }, []);
 
   const goLive = useCallback(
@@ -147,6 +191,18 @@ function Studio() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setCommandOpen(true);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+        return;
+      }
+
       if (event.key === "ArrowRight" || event.key === "PageDown") {
         event.preventDefault();
         step(1);
@@ -167,19 +223,23 @@ function Studio() {
     return () => window.removeEventListener("keydown", onKey);
   }, [step]);
 
-  const openProjection = () => {
+  const openWindow = (path: string, ref: React.MutableRefObject<Window | null>, name: string) => {
     const win = window.open(
-      "/projecao",
-      "palco-projecao",
+      path,
+      name,
       "popup=yes,width=1280,height=720,left=100,top=100",
     );
     if (!win) {
-      toast.error("Permita pop-ups para abrir a tela de projeção");
-      return;
+      toast.error("Permita pop-ups para abrir a tela");
+      return null;
     }
-    projectionWindow.current = win;
+    ref.current = win;
     publishLiveState(state);
+    return win;
   };
+
+  const openProjection = () => openWindow("/projecao", projectionWindow, "palco-projecao");
+  const openStage = () => openWindow("/palco", stageWindow, "palco-stage");
 
   const addSongToSetlist = (song: SongRecord) => {
     if (!activeSetlistId) {
@@ -191,7 +251,13 @@ function Studio() {
         setlistId: activeSetlistId,
         kind: "song",
         title: song.title,
-        payload: { songId: song.id },
+        payload: {
+          songId: song.id,
+          songKey: song.song_key,
+          bpm: song.bpm,
+          notes: song.notes,
+          durationMin: 5,
+        },
       },
     });
   };
@@ -204,45 +270,91 @@ function Studio() {
     addItem.mutate({ data: { setlistId: activeSetlistId, kind: "bible", title, payload } });
   };
 
+  const handleCommandAction = (action: QuickAction) => {
+    if (action.type === "blackout") setBlackout((v) => !v);
+    if (action.type === "freeze") setFreeze((v) => !v);
+    if (action.type === "logo") setShowLogo((v) => !v);
+    if (action.type === "clear") setLiveSlide(null);
+    if (action.type === "openProjection") openProjection();
+    if (action.type === "openStage") openStage();
+  };
+
+  const handleGoToRef = async (ref: ReturnType<typeof parseReference>) => {
+    if (!ref) return;
+    const label = "NVI";
+    const result = await fetchChapter({
+      data: { translation: "NVIPT", book: ref.book.id, chapter: ref.chapter },
+    });
+    const slides = buildBibleSlides(
+      formatRef(ref.book.id, ref.chapter, ref.verseStart, ref.verseEnd),
+      label,
+      result.verses.slice((ref.verseStart ?? 1) - 1, ref.verseEnd ?? undefined),
+      versesPerSlide,
+    );
+    openDeck({ title: formatRef(ref.book.id, ref.chapter, ref.verseStart, ref.verseEnd) }, slides);
+  };
+
   const previewSlide = deck[previewIndex] ?? null;
   const nextSlide = deck[previewIndex + 1] ?? null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-stage">
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        songs={songs}
+        setlists={setlists}
+        onOpenSong={(song) => {
+          openDeck(
+            { title: song.title, songKey: song.song_key, bpm: song.bpm, notes: song.notes },
+            buildSongSlides(song, linesPerSlide),
+          );
+        }}
+        onOpenSetlist={(setlist) => setActiveSetlistId(setlist.id)}
+        onGoToRef={handleGoToRef}
+        onAction={handleCommandAction}
+      />
+
       <header className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-2.5">
         <div className="flex items-center gap-3">
           <Link to="/" className="font-display text-base font-bold">
             Palco<span className="text-primary">.</span>
           </Link>
           <span className="hidden text-xs text-muted-foreground md:inline">
-            ← → navega · B blackout · L logo · C congela · Esc limpa
+            ← → navega · B blackout · L logo · C congela · Esc limpa · Ctrl+F busca
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setCommandOpen(true)}>
+            <Search className="mr-1 size-4" /> Buscar
+          </Button>
+          <Button variant="secondary" size="sm" onClick={openStage}>
+            <Timer className="mr-1 size-4" /> Palco
+          </Button>
           <Button
             variant={blackout ? "destructive" : "secondary"}
             size="sm"
             onClick={() => setBlackout((v) => !v)}
           >
-            <Square className="size-4" /> Blackout
+            <Square className="mr-1 size-4" /> Blackout
           </Button>
           <Button
             variant={showLogo ? "default" : "secondary"}
             size="sm"
             onClick={() => setShowLogo((v) => !v)}
           >
-            <Power className="size-4" /> Abertura
+            <Power className="mr-1 size-4" /> Abertura
           </Button>
           <Button
             variant={freeze ? "default" : "secondary"}
             size="sm"
-            title="Congela a imagem na tela de projeção (F)"
+            title="Congela a imagem na tela de projeção (C)"
             onClick={() => setFreeze((v) => !v)}
           >
-            <Snowflake className="size-4" /> Congelar
+            <Snowflake className="mr-1 size-4" /> Congelar
           </Button>
           <Button size="sm" onClick={openProjection}>
-            <Monitor className="size-4" /> Tela de projeção
+            <Monitor className="mr-1 size-4" /> Projeção
           </Button>
           <Button
             variant="ghost"
@@ -268,90 +380,90 @@ function Studio() {
         )}
       >
         {leftOpen ? (
-        <section className="panel flex min-h-0 flex-col p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Biblioteca</span>
-            <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setLeftOpen(false)}>
-              <PanelLeftClose className="size-4" />
-            </Button>
-          </div>
-          <Tabs defaultValue="musicas" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="musicas">
-                <Music4 className="size-4" />
-              </TabsTrigger>
-              <TabsTrigger value="biblia">
-                <BookOpen className="size-4" />
-              </TabsTrigger>
-              <TabsTrigger value="repertorio">
-                <Layers className="size-4" />
-              </TabsTrigger>
-              <TabsTrigger value="aviso">
-                <Type className="size-4" />
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="musicas" className="mt-3 min-h-0 flex-1">
-              <SongsPanel
-                linesPerSlide={linesPerSlide}
-                onOpenDeck={openDeck}
-                onAddToSetlist={addSongToSetlist}
-              />
-            </TabsContent>
-            <TabsContent value="biblia" className="mt-3 min-h-0 flex-1">
-              <BiblePanel
-                versesPerSlide={versesPerSlide}
-                onOpenDeck={openDeck}
-                onSendSlide={(slide) => {
-                  setDeckTitle(slide.title ?? "Bíblia");
-                  setDeck([slide]);
-                  setPreviewIndex(0);
-                  setLiveSlide(slide);
-                  setShowLogo(false);
-                }}
-                onAddToSetlist={addBibleToSetlist}
-              />
-            </TabsContent>
-            <TabsContent value="repertorio" className="mt-3 min-h-0 flex-1">
-              <SetlistPanel
-                linesPerSlide={linesPerSlide}
-                versesPerSlide={versesPerSlide}
-                activeSetlistId={activeSetlistId}
-                onActiveSetlistChange={setActiveSetlistId}
-                onOpenDeck={openDeck}
-              />
-            </TabsContent>
-            <TabsContent value="aviso" className="mt-3 min-h-0 flex-1 space-y-3">
-              <div className="grid gap-1.5">
-                <Label className="text-xs text-muted-foreground">Título</Label>
-                <Input
-                  value={announcement.title}
-                  onChange={(e) => setAnnouncement((a) => ({ ...a, title: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label className="text-xs text-muted-foreground">Texto (linha em branco separa slides)</Label>
-                <Textarea
-                  rows={10}
-                  value={announcement.body}
-                  onChange={(e) => setAnnouncement((a) => ({ ...a, body: e.target.value }))}
-                  placeholder={"Culto de oração\nQuarta, 19h30"}
-                />
-              </div>
-              <Button
-                className="w-full"
-                onClick={() =>
-                  openDeck(
-                    announcement.title || "Aviso",
-                    buildTextSlides(announcement.title || "Aviso", announcement.body, linesPerSlide),
-                  )
-                }
-              >
-                Carregar no preview
+          <section className="panel flex min-h-0 flex-col p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Biblioteca</span>
+              <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setLeftOpen(false)}>
+                <PanelLeftClose className="size-4" />
               </Button>
-            </TabsContent>
-          </Tabs>
-        </section>
+            </div>
+            <Tabs defaultValue="musicas" className="flex min-h-0 flex-1 flex-col">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="musicas">
+                  <Music4 className="size-4" />
+                </TabsTrigger>
+                <TabsTrigger value="biblia">
+                  <BookOpen className="size-4" />
+                </TabsTrigger>
+                <TabsTrigger value="repertorio">
+                  <Layers className="size-4" />
+                </TabsTrigger>
+                <TabsTrigger value="aviso">
+                  <Type className="size-4" />
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="musicas" className="mt-3 min-h-0 flex-1">
+                <SongsPanel
+                  linesPerSlide={linesPerSlide}
+                  onOpenDeck={openDeck}
+                  onAddToSetlist={addSongToSetlist}
+                />
+              </TabsContent>
+              <TabsContent value="biblia" className="mt-3 min-h-0 flex-1">
+                <BiblePanel
+                  versesPerSlide={versesPerSlide}
+                  onOpenDeck={openDeck}
+                  onSendSlide={(slide) => {
+                    setDeckTitle(slide.title ?? "Bíblia");
+                    setDeck([slide]);
+                    setPreviewIndex(0);
+                    setLiveSlide(slide);
+                    setShowLogo(false);
+                  }}
+                  onAddToSetlist={addBibleToSetlist}
+                />
+              </TabsContent>
+              <TabsContent value="repertorio" className="mt-3 min-h-0 flex-1">
+                <SetlistPanel
+                  linesPerSlide={linesPerSlide}
+                  versesPerSlide={versesPerSlide}
+                  activeSetlistId={activeSetlistId}
+                  onActiveSetlistChange={setActiveSetlistId}
+                  onOpenDeck={openDeck}
+                />
+              </TabsContent>
+              <TabsContent value="aviso" className="mt-3 min-h-0 flex-1 space-y-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Título</Label>
+                  <Input
+                    value={announcement.title}
+                    onChange={(e) => setAnnouncement((a) => ({ ...a, title: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Texto (linha em branco separa slides)</Label>
+                  <Textarea
+                    rows={10}
+                    value={announcement.body}
+                    onChange={(e) => setAnnouncement((a) => ({ ...a, body: e.target.value }))}
+                    placeholder={"Culto de oração\nQuarta, 19h30"}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    openDeck(
+                      { title: announcement.title || "Aviso" },
+                      buildTextSlides(announcement.title || "Aviso", announcement.body, linesPerSlide),
+                    )
+                  }
+                >
+                  Carregar no preview
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </section>
         ) : (
           <section className="panel flex min-h-0 flex-col items-center gap-2 p-2">
             <Button variant="ghost" size="icon" title="Expandir biblioteca" onClick={() => setLeftOpen(true)}>
@@ -446,35 +558,53 @@ function Studio() {
         </section>
 
         {rightOpen ? (
-        <section className="panel flex min-h-0 flex-col p-3">
-          <div className="mb-2 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <Palette className="size-3.5" /> Tema e projeção
-            </span>
-            <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setRightOpen(false)}>
-              <PanelRightClose className="size-4" />
-            </Button>
-          </div>
-          <div className="min-h-0 flex-1">
-            <ThemePanel
-              theme={theme}
-              onChange={setTheme}
-              linesPerSlide={linesPerSlide}
-              onLinesPerSlideChange={setLinesPerSlide}
-              versesPerSlide={versesPerSlide}
-              onVersesPerSlideChange={setVersesPerSlide}
-              logoText={logoText}
-              onLogoTextChange={setLogoText}
-            />
-          </div>
-        </section>
+          <section className="panel flex min-h-0 flex-col p-3">
+            <div className="mb-2 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Palette className="size-3.5" /> Configurações
+              </span>
+              <Button variant="ghost" size="icon" title="Encolher painel" onClick={() => setRightOpen(false)}>
+                <PanelRightClose className="size-4" />
+              </Button>
+            </div>
+            <Tabs defaultValue="tema" className="flex min-h-0 flex-1 flex-col">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="tema">Tema</TabsTrigger>
+                <TabsTrigger value="palco">Retorno</TabsTrigger>
+              </TabsList>
+              <TabsContent value="tema" className="mt-3 min-h-0 flex-1">
+                <ThemePanel
+                  theme={theme}
+                  onChange={setTheme}
+                  linesPerSlide={linesPerSlide}
+                  onLinesPerSlideChange={setLinesPerSlide}
+                  versesPerSlide={versesPerSlide}
+                  onVersesPerSlideChange={setVersesPerSlide}
+                  logoText={logoText}
+                  onLogoTextChange={setLogoText}
+                />
+              </TabsContent>
+              <TabsContent value="palco" className="mt-3 min-h-0 flex-1">
+                <StagePanel
+                  stage={stage}
+                  onStageChange={setStage}
+                  timers={timers}
+                  onTimersChange={setTimers}
+                  songKey={songKey}
+                  bpm={bpm}
+                  notes={notes}
+                  onOpenStage={openStage}
+                />
+              </TabsContent>
+            </Tabs>
+          </section>
         ) : (
           <section className="panel flex min-h-0 flex-col items-center gap-2 p-2">
-            <Button variant="ghost" size="icon" title="Expandir temas" onClick={() => setRightOpen(true)}>
+            <Button variant="ghost" size="icon" title="Expandir painel" onClick={() => setRightOpen(true)}>
               <PanelRightOpen className="size-4" />
             </Button>
             <span className="mt-1 text-[10px] tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
-              TEMA
+              CONFIG
             </span>
           </section>
         )}
