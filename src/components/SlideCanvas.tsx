@@ -17,13 +17,15 @@ interface SlideCanvasProps {
 
 export function SlideCanvas({
   slide,
-  theme,
+  theme: baseTheme,
   blackout = false,
   showLogo = false,
   logoText = "",
   className,
   media = true,
 }: SlideCanvasProps) {
+  // cada seção da música pode sobrescrever parte do tema
+  const theme = slide?.themeOverride ? { ...baseTheme, ...slide.themeOverride } : baseTheme;
   const empty = !slide || !slide.lines.length;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
