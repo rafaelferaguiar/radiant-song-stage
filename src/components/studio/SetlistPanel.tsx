@@ -23,19 +23,20 @@ import {
   listSongs,
   removeSetlistItem,
   reorderSetlistItems,
+  updateSetlistItem,
   type SetlistItemRecord,
 } from "@/lib/library.functions";
 import { getChapter } from "@/lib/bible.functions";
 import { buildBibleSlides, buildSongSlides } from "@/lib/slides";
 import { formatRef, TRANSLATIONS } from "@/lib/bible-books";
-import type { ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
 
 interface SetlistPanelProps {
   linesPerSlide: number;
   versesPerSlide: number;
   activeSetlistId: string | null;
   onActiveSetlistChange: (id: string | null) => void;
-  onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
+  onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
 }
 
 const KIND_ICON = {
