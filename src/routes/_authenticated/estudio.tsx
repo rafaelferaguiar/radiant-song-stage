@@ -419,6 +419,7 @@ function Studio() {
               <TabsContent value="musicas" className="mt-3 min-h-0 flex-1">
                 <SongsPanel
                   linesPerSlide={linesPerSlide}
+                  theme={theme}
                   onOpenDeck={openDeck}
                   onAddToSetlist={addSongToSetlist}
                 />
