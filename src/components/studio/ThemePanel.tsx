@@ -21,6 +21,7 @@ import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/libra
 import {
   DEFAULT_THEME,
   FONT_OPTIONS,
+  LOOP_KIND_OPTIONS,
   LOOP_PRESETS,
   type BlendMode,
   type LoopKind,
