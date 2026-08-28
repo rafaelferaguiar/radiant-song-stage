@@ -10,12 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteSong, listSongs, type SongRecord } from "@/lib/library.functions";
 import { buildSongSlides } from "@/lib/slides";
-import type { ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
 import { SongEditor } from "./SongEditor";
 
 interface SongsPanelProps {
   linesPerSlide: number;
-  onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
+  onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
   onAddToSetlist?: (song: SongRecord) => void;
 }
 
