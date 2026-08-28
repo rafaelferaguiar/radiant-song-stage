@@ -225,6 +225,7 @@ const CHANNEL = "spresenter:live";
 export const INITIAL_LIVE_STATE: LiveState = {
   slide: null,
   next: null,
+  nextSection: null,
   blackout: false,
   freeze: false,
   showLogo: false,
