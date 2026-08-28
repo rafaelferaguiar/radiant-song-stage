@@ -9,7 +9,17 @@ export interface ProjectionSlide {
   footer?: string;
 }
 
-export type BackgroundKind = "none" | "image" | "video";
+export interface DeckMeta {
+  title: string;
+  songKey?: string;
+  bpm?: number | null;
+  notes?: string;
+  durationMin?: number | null;
+}
+
+export type BackgroundKind = "none" | "image" | "video" | "loop";
+export type LoopKind = "none" | "gradient" | "particles" | "waves" | "pulse";
+export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
 
 export interface ThemeConfig {
   bgKind: BackgroundKind;
@@ -19,6 +29,11 @@ export interface ThemeConfig {
   bgMuted: boolean;
   bgSpeed: number;
   bgBlur: number;
+  loopKind: LoopKind;
+  loopColors: string[];
+  loopSpeed: number;
+  loopOverlay: number;
+  loopBlend: BlendMode;
   bg: string;
   fg: string;
   accentFg: string;
@@ -46,6 +61,11 @@ export const DEFAULT_THEME: ThemeConfig = {
   bgMuted: true,
   bgSpeed: 1,
   bgBlur: 0,
+  loopKind: "none",
+  loopColors: ["#1e3a8a", "#7c2d12"],
+  loopSpeed: 1,
+  loopOverlay: 30,
+  loopBlend: "normal",
   bg: "#07090f",
   fg: "#ffffff",
   accentFg: "#f6c46a",
@@ -65,6 +85,69 @@ export const DEFAULT_THEME: ThemeConfig = {
   transition: "fade",
 };
 
+export const LOOP_PRESETS: { name: string; config: Partial<ThemeConfig> }[] = [
+  {
+    name: "Worship Blue",
+    config: {
+      bgKind: "loop",
+      loopKind: "gradient",
+      loopColors: ["#0f172a", "#1e40af", "#1e3a8a"],
+      loopSpeed: 0.8,
+      loopOverlay: 35,
+      loopBlend: "normal",
+      bg: "#0f172a",
+    },
+  },
+  {
+    name: "Pôr do Sol",
+    config: {
+      bgKind: "loop",
+      loopKind: "gradient",
+      loopColors: ["#431407", "#c2410c", "#f59e0b"],
+      loopSpeed: 1.2,
+      loopOverlay: 25,
+      loopBlend: "normal",
+      bg: "#2a0f06",
+    },
+  },
+  {
+    name: "Galáxia",
+    config: {
+      bgKind: "loop",
+      loopKind: "particles",
+      loopColors: ["#ffffff", "#a5b4fc"],
+      loopSpeed: 0.6,
+      loopOverlay: 45,
+      loopBlend: "screen",
+      bg: "#020617",
+    },
+  },
+  {
+    name: "Ondas",
+    config: {
+      bgKind: "loop",
+      loopKind: "waves",
+      loopColors: ["#0c4a6e", "#075985", "#38bdf8"],
+      loopSpeed: 1,
+      loopOverlay: 30,
+      loopBlend: "overlay",
+      bg: "#082f49",
+    },
+  },
+  {
+    name: "Pulsação",
+    config: {
+      bgKind: "loop",
+      loopKind: "pulse",
+      loopColors: ["#3f2e18", "#78350f"],
+      loopSpeed: 1,
+      loopOverlay: 40,
+      loopBlend: "normal",
+      bg: "#1a120b",
+    },
+  },
+];
+
 export const FONT_OPTIONS = [
   { value: "'DM Sans', system-ui, sans-serif", label: "DM Sans" },
   { value: "'Space Grotesk', sans-serif", label: "Space Grotesk" },
@@ -73,13 +156,35 @@ export const FONT_OPTIONS = [
   { value: "Impact, 'Arial Black', sans-serif", label: "Impact" },
 ];
 
+export interface StageState {
+  message: string;
+  showMessage: boolean;
+  blink: boolean;
+  showNotes: boolean;
+  showTimers: boolean;
+}
+
+export interface TimerState {
+  serviceStartedAt: number | null;
+  servicePausedAt: number | null;
+  itemStartedAt: number | null;
+  itemDurationMin: number | null;
+  itemPausedAt: number | null;
+}
+
 export interface LiveState {
   slide: ProjectionSlide | null;
+  next: ProjectionSlide | null;
   blackout: boolean;
   freeze: boolean;
   showLogo: boolean;
   logoText: string;
   theme: ThemeConfig;
+  stage: StageState;
+  timers: TimerState;
+  songKey: string;
+  bpm: number | null;
+  notes: string;
   updatedAt: number;
 }
 
@@ -88,11 +193,29 @@ const CHANNEL = "spresenter:live";
 
 export const INITIAL_LIVE_STATE: LiveState = {
   slide: null,
+  next: null,
   blackout: false,
   freeze: false,
   showLogo: false,
   logoText: "",
   theme: DEFAULT_THEME,
+  stage: {
+    message: "",
+    showMessage: false,
+    blink: false,
+    showNotes: true,
+    showTimers: true,
+  },
+  timers: {
+    serviceStartedAt: null,
+    servicePausedAt: null,
+    itemStartedAt: null,
+    itemDurationMin: null,
+    itemPausedAt: null,
+  },
+  songKey: "",
+  bpm: null,
+  notes: "",
   updatedAt: 0,
 };
 
@@ -106,6 +229,8 @@ export function readLiveState(): LiveState {
       ...INITIAL_LIVE_STATE,
       ...parsed,
       theme: { ...DEFAULT_THEME, ...(parsed.theme ?? {}) },
+      stage: { ...INITIAL_LIVE_STATE.stage, ...(parsed.stage ?? {}) },
+      timers: { ...INITIAL_LIVE_STATE.timers, ...(parsed.timers ?? {}) },
     };
   } catch {
     return INITIAL_LIVE_STATE;

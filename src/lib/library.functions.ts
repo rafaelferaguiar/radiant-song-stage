@@ -199,6 +199,29 @@ export const removeSetlistItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateSetlistItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; title?: string; payload?: JsonObject; position?: number }) => ({
+    id: String(input.id),
+    title: input.title !== undefined ? String(input.title).slice(0, 200) : undefined,
+    payload: input.payload,
+    position: Number.isFinite(input.position) ? Math.trunc(input.position as number) : undefined,
+  }))
+  .handler(async ({ data, context }): Promise<SetlistItemRecord> => {
+    const update: Record<string, unknown> = {};
+    if (data.title !== undefined) update["title"] = data.title;
+    if (data.payload !== undefined) update["payload"] = data.payload;
+    if (data.position !== undefined) update["position"] = data.position;
+    const { data: row, error } = await context.supabase
+      .from("setlist_items")
+      .update(update as any)
+      .eq("id", data.id)
+      .select("id, setlist_id, position, kind, title, payload")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as SetlistItemRecord;
+  });
+
 export const reorderSetlistItems = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { items: Array<{ id: string; position: number }> }) => ({
@@ -213,6 +236,31 @@ export const reorderSetlistItems = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
     return { ok: true };
+  });
+
+export const searchSongs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { q: string }) => ({ q: String(input.q).slice(0, 120) }))
+  .handler(async ({ data, context }): Promise<SongRecord[]> => {
+    const q = data.q.trim();
+    if (!q) return [];
+    const terms = q.split(/\s+/).map((t) => `${t}:*`).join(" & ");
+    const { data: rows, error } = await context.supabase
+      .from("songs")
+      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+      .textSearch("search_vector", terms)
+      .limit(12);
+    if (error) {
+      // fallback simples se search_vector não existir ainda
+      const { data: fallback, error: fallbackError } = await context.supabase
+        .from("songs")
+        .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+        .or(`title.ilike.%${q}%,artist.ilike.%${q}%,lyrics.ilike.%${q}%`)
+        .limit(12);
+      if (fallbackError) throw new Error(fallbackError.message);
+      return (fallback ?? []) as SongRecord[];
+    }
+    return (rows ?? []) as SongRecord[];
   });
 
 export const listThemes = createServerFn({ method: "GET" })

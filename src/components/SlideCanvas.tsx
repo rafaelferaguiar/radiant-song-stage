@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ProjectionSlide, ThemeConfig } from "@/lib/projection";
+import { renderLoop } from "@/lib/loops";
 
 interface SlideCanvasProps {
   slide: ProjectionSlide | null;
@@ -10,7 +11,7 @@ interface SlideCanvasProps {
   showLogo?: boolean;
   logoText?: string;
   className?: string;
-  /** Desative em miniaturas para não rodar vários vídeos ao mesmo tempo. */
+  /** Desative em miniaturas para não rodar vários vídeos/loops ao mesmo tempo. */
   media?: boolean;
 }
 
@@ -25,11 +26,47 @@ export function SlideCanvas({
 }: SlideCanvasProps) {
   const empty = !slide || !slide.lines.length;
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
     if (video) video.playbackRate = theme.bgSpeed || 1;
   }, [theme.bgSpeed, theme.bgUrl]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || theme.bgKind !== "loop" || theme.loopKind === "none") return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // resolução interna para evitar blur em tela grande
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(rect.width * scale);
+      canvas.height = Math.floor(rect.height * scale);
+    };
+    resize();
+
+    let raf = 0;
+    if (media) {
+      const loop = (time: number) => {
+        renderLoop(canvas, theme, ctx, time);
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    } else {
+      renderLoop(canvas, theme, ctx, 0);
+    }
+    const onResize = () => resize();
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [theme, media]);
+
+  const overlayOpacity = theme.loopKind !== "none" ? theme.loopOverlay / 100 : theme.overlay / 400;
 
   return (
     <div
@@ -41,7 +78,13 @@ export function SlideCanvas({
         fontFamily: theme.fontFamily,
       }}
     >
-      {!blackout && theme.bgKind !== "none" && theme.bgUrl ? (
+      {!blackout && theme.bgKind === "loop" && theme.loopKind !== "none" ? (
+        <canvas
+          ref={canvasRef}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          style={{ opacity: 1 }}
+        />
+      ) : !blackout && theme.bgKind !== "none" && theme.bgUrl ? (
         theme.bgKind === "video" ? (
           <video
             ref={videoRef}
@@ -74,7 +117,7 @@ export function SlideCanvas({
 
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ backgroundColor: "#000", opacity: theme.overlay / 400 }}
+        style={{ backgroundColor: "#000", opacity: overlayOpacity }}
       />
 
       {blackout ? null : showLogo ? (

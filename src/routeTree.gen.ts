@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as PalcoRouteImport } from './routes/palco'
 import { Route as ProjecaoRouteImport } from './routes/projecao'
 import { Route as AuthenticatedEstudioRouteImport } from './routes/_authenticated/estudio'
 
@@ -29,6 +30,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PalcoRoute = PalcoRouteImport.update({
+  id: '/palco',
+  path: '/palco',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjecaoRoute = ProjecaoRouteImport.update({
   id: '/projecao',
   path: '/projecao',
@@ -43,12 +49,14 @@ const AuthenticatedEstudioRoute = AuthenticatedEstudioRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/estudio': typeof AuthenticatedEstudioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/estudio': typeof AuthenticatedEstudioRoute
 }
@@ -57,19 +65,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/_authenticated/estudio': typeof AuthenticatedEstudioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/projecao' | '/estudio'
+  fullPaths: '/' | '/auth' | '/palco' | '/projecao' | '/estudio'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/projecao' | '/estudio'
+  to: '/' | '/auth' | '/palco' | '/projecao' | '/estudio'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/palco'
     | '/projecao'
     | '/_authenticated/estudio'
   fileRoutesById: FileRoutesById
@@ -78,6 +88,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  PalcoRoute: typeof PalcoRoute
   ProjecaoRoute: typeof ProjecaoRoute
 }
 
@@ -102,6 +113,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/palco': {
+      id: '/palco'
+      path: '/palco'
+      fullPath: '/palco'
+      preLoaderRoute: typeof PalcoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projecao': {
@@ -136,6 +154,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  PalcoRoute: PalcoRoute,
   ProjecaoRoute: ProjecaoRoute,
 }
 export const routeTree = rootRouteImport

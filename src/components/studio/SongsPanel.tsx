@@ -10,12 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteSong, listSongs, type SongRecord } from "@/lib/library.functions";
 import { buildSongSlides } from "@/lib/slides";
-import type { ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
 import { SongEditor } from "./SongEditor";
 
 interface SongsPanelProps {
   linesPerSlide: number;
-  onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
+  onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
   onAddToSetlist?: (song: SongRecord) => void;
 }
 
@@ -89,7 +89,17 @@ export function SongsPanel({ linesPerSlide, onOpenDeck, onAddToSetlist }: SongsP
                 <button
                   type="button"
                   className="w-full text-left"
-                  onClick={() => onOpenDeck(song.title, buildSongSlides(song, linesPerSlide))}
+                  onClick={() =>
+                    onOpenDeck(
+                      {
+                        title: song.title,
+                        songKey: song.song_key,
+                        bpm: song.bpm,
+                        notes: song.notes,
+                      },
+                      buildSongSlides(song, linesPerSlide),
+                    )
+                  }
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <Music4 className="size-3.5 text-primary" />

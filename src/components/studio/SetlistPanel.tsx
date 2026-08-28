@@ -23,19 +23,20 @@ import {
   listSongs,
   removeSetlistItem,
   reorderSetlistItems,
+  updateSetlistItem,
   type SetlistItemRecord,
 } from "@/lib/library.functions";
 import { getChapter } from "@/lib/bible.functions";
 import { buildBibleSlides, buildSongSlides } from "@/lib/slides";
 import { formatRef, TRANSLATIONS } from "@/lib/bible-books";
-import type { ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
 
 interface SetlistPanelProps {
   linesPerSlide: number;
   versesPerSlide: number;
   activeSetlistId: string | null;
   onActiveSetlistChange: (id: string | null) => void;
-  onOpenDeck: (title: string, slides: ProjectionSlide[]) => void;
+  onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
 }
 
 const KIND_ICON = {
@@ -62,6 +63,7 @@ export function SetlistPanel({
   const removeItem = useServerFn(removeSetlistItem);
   const reorder = useServerFn(reorderSetlistItems);
   const addItem = useServerFn(addSetlistItem);
+  const editItem = useServerFn(updateSetlistItem);
 
   const { data: setlists = [] } = useQuery({ queryKey: ["setlists"], queryFn: () => fetchSetlists() });
   const { data: songs = [] } = useQuery({ queryKey: ["songs"], queryFn: () => fetchSongs() });
@@ -92,6 +94,7 @@ export function SetlistPanel({
   });
 
   const openItem = async (item: SetlistItemRecord) => {
+    const durationMin = Number(item.payload["durationMin"]) || null;
     if (item.kind === "song") {
       const songId = String(item.payload["songId"] ?? "");
       const song = songs.find((s) => s.id === songId);
@@ -99,7 +102,16 @@ export function SetlistPanel({
         toast.error("Música não encontrada na biblioteca");
         return;
       }
-      onOpenDeck(song.title, buildSongSlides(song, linesPerSlide));
+      onOpenDeck(
+        {
+          title: song.title,
+          songKey: song.song_key,
+          bpm: song.bpm,
+          notes: song.notes,
+          durationMin,
+        },
+        buildSongSlides(song, linesPerSlide),
+      );
       return;
     }
     if (item.kind === "bible") {
@@ -108,13 +120,16 @@ export function SetlistPanel({
       const chapter = Number(item.payload["chapter"] ?? 1);
       const result = await fetchChapter({ data: { translation, book: bookId, chapter } });
       const label = TRANSLATIONS.find((t) => t.code === translation)?.short ?? translation;
-      onOpenDeck(item.title, buildBibleSlides(formatRef(bookId, chapter), label, result.verses, versesPerSlide));
+      onOpenDeck(
+        { title: item.title, durationMin },
+        buildBibleSlides(formatRef(bookId, chapter), label, result.verses, versesPerSlide),
+      );
       return;
     }
     const lines = String(item.payload["body"] ?? item.title)
       .split("\n")
       .filter(Boolean);
-    onOpenDeck(item.title, [
+    onOpenDeck({ title: item.title, durationMin }, [
       { id: item.id, kind: "text", title: item.title, lines, footer: item.title },
     ]);
   };
@@ -201,7 +216,25 @@ export function SetlistPanel({
                     <Icon className="size-3.5 text-primary" />
                     <span className="truncate">{item.title}</span>
                   </button>
-                  <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <input
+                      type="number"
+                      min={0}
+                      value={Number(item.payload["durationMin"]) || ""}
+                      onChange={async (e) => {
+                        const v = e.target.value;
+                        await editItem({
+                          data: {
+                            id: item.id,
+                            payload: { ...item.payload, durationMin: v ? Number(v) : null },
+                          },
+                        });
+                        invalidate();
+                      }}
+                      className="h-7 w-16 rounded border border-border bg-background px-1.5 text-xs"
+                      placeholder="min"
+                      title="Duração estimada em minutos"
+                    />
                     <Button variant="ghost" size="icon" className="size-6" onClick={() => void move(index, -1)}>
                       <ArrowUp className="size-3" />
                     </Button>
