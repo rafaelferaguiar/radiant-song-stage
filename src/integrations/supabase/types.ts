@@ -119,6 +119,7 @@ export type Database = {
           id: string
           lyrics: string
           notes: string
+          sections: Json
           song_key: string
           tags: string[]
           title: string
@@ -134,6 +135,7 @@ export type Database = {
           id?: string
           lyrics?: string
           notes?: string
+          sections?: Json
           song_key?: string
           tags?: string[]
           title: string
@@ -149,6 +151,7 @@ export type Database = {
           id?: string
           lyrics?: string
           notes?: string
+          sections?: Json
           song_key?: string
           tags?: string[]
           title?: string
