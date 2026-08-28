@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic2, BookOpen, ListMusic, Command, Layers, Monitor, Tv, EyeOff, Flame, Timer, Search } from "lucide-react";
+import { Mic2, BookOpen, ListMusic, Command as CommandIcon, Layers, Monitor, Tv, EyeOff, Flame, Timer, Search } from "lucide-react";
 
 import {
+  Command as CommandRoot,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
