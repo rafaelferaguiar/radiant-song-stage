@@ -84,8 +84,11 @@ export function renderLoop(
       h * 0.5,
       radius,
     );
-    grad.addColorStop(0, colorWithAlpha(colors[0], 0.6 + pulse * 0.3));
-    grad.addColorStop(1, colorWithAlpha(colors[1] || colors[0], 0));
+    grad.addColorStop(0, colorWithAlpha(colors[0] ?? theme.fg ?? "#ffffff", 0.6 + pulse * 0.3));
+    grad.addColorStop(
+      1,
+      colorWithAlpha(colors[1] ?? colors[0] ?? theme.fg ?? "#ffffff", 0),
+    );
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
   }
