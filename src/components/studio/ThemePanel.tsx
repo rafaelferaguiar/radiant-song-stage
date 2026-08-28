@@ -18,7 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
-import { DEFAULT_THEME, FONT_OPTIONS, type ProjectionSlide, type ThemeConfig } from "@/lib/projection";
+import {
+  DEFAULT_THEME,
+  FONT_OPTIONS,
+  LOOP_PRESETS,
+  type BlendMode,
+  type LoopKind,
+  type ProjectionSlide,
+  type ThemeConfig,
+} from "@/lib/projection";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useRef, useState } from "react";
@@ -30,7 +38,6 @@ const SAMPLE_SLIDE: ProjectionSlide = {
   lines: ["Grande é o Senhor", "e muito digno de louvor"],
   footer: "Salmos 48:1",
 };
-
 
 interface ThemePanelProps {
   theme: ThemeConfig;
@@ -50,6 +57,18 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       {children}
     </div>
   );
+}
+
+function parseColors(input: string): string[] {
+  return input
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => /^#?[0-9a-fA-F]{6}$/.test(s))
+    .map((s) => (s.startsWith("#") ? s : `#${s}`));
+}
+
+function formatColors(colors: string[]) {
+  return colors.join(", ");
 }
 
 export function ThemePanel({
@@ -83,7 +102,6 @@ export function ThemePanel({
     },
     onError: (error: Error) => toast.error(error.message),
   });
-
 
   const set = (patch: Partial<ThemeConfig>) => onChange({ ...theme, ...patch });
 
@@ -220,7 +238,6 @@ export function ThemePanel({
           </p>
         </div>
 
-
         <div className="border-t border-border/60 pt-2">
           <Row label="Fonte">
             <Select value={theme.fontFamily} onValueChange={(v) => set({ fontFamily: v })}>
@@ -318,11 +335,12 @@ export function ThemePanel({
                 <SelectItem value="none">Cor sólida</SelectItem>
                 <SelectItem value="image">Imagem</SelectItem>
                 <SelectItem value="video">Vídeo</SelectItem>
+                <SelectItem value="loop">Loop animado</SelectItem>
               </SelectContent>
             </Select>
           </Row>
 
-          {theme.bgKind !== "none" ? (
+          {theme.bgKind !== "none" && theme.bgKind !== "loop" ? (
             <div className="space-y-2">
               <Input
                 value={theme.bgUrl}
@@ -397,6 +415,105 @@ export function ThemePanel({
                   </Row>
                 </>
               ) : null}
+            </div>
+          ) : null}
+
+          {theme.bgKind === "loop" ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                {LOOP_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => set(preset.config)}
+                    className="relative overflow-hidden rounded border border-border/60 bg-card hover:border-primary/60"
+                  >
+                    <div className="aspect-video">
+                      <SlideCanvas
+                        slide={SAMPLE_SLIDE}
+                        theme={{ ...theme, ...preset.config }}
+                        media={false}
+                      />
+                    </div>
+                    <span className="block px-1.5 py-1 text-[10px] text-muted-foreground">{preset.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <Row label="Tipo de loop">
+                <Select
+                  value={theme.loopKind}
+                  onValueChange={(v) => set({ loopKind: v as LoopKind })}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gradient">Gradiente</SelectItem>
+                    <SelectItem value="particles">Partículas</SelectItem>
+                    <SelectItem value="waves">Ondas</SelectItem>
+                    <SelectItem value="pulse">Pulsação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
+
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">Cores (hex separadas por vírgula)</Label>
+                <Input
+                  value={formatColors(theme.loopColors)}
+                  onChange={(e) => {
+                    const colors = parseColors(e.target.value);
+                    if (colors.length) set({ loopColors: colors });
+                  }}
+                  placeholder="#1e3a8a, #7c2d12"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {theme.loopColors.map((c) => (
+                    <span
+                      key={c}
+                      className="inline-block size-4 rounded-full border border-border"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <Row label={`Velocidade ${theme.loopSpeed.toFixed(2)}x`}>
+                <Slider
+                  className="w-40"
+                  min={0.1}
+                  max={3}
+                  step={0.1}
+                  value={[theme.loopSpeed]}
+                  onValueChange={([v]) => set({ loopSpeed: v ?? theme.loopSpeed })}
+                />
+              </Row>
+              <Row label={`Escurecer loop ${theme.loopOverlay}%`}>
+                <Slider
+                  className="w-40"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={[theme.loopOverlay]}
+                  onValueChange={([v]) => set({ loopOverlay: v ?? theme.loopOverlay })}
+                />
+              </Row>
+              <Row label="Mesclagem">
+                <Select
+                  value={theme.loopBlend}
+                  onValueChange={(v) => set({ loopBlend: v as BlendMode })}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="multiply">Multiplicar</SelectItem>
+                    <SelectItem value="screen">Tela</SelectItem>
+                    <SelectItem value="overlay">Overlay</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
             </div>
           ) : null}
         </div>
