@@ -22,7 +22,7 @@ export function renderLoop(
     const x1 = w * 0.5 - Math.cos(angle) * w * 0.5;
     const y1 = h * 0.5 - Math.sin(angle) * h * 0.5;
     const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-    colors.forEach((c, i) => grad.addColorStop(i / Math.max(1, colors.length - 1), c));
+    colors.forEach((c, i) => grad.addColorStop(i / Math.max(1, colors.length - 1), c ?? theme.fg ?? "#ffffff"));
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
   }
