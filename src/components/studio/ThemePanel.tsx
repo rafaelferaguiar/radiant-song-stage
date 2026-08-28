@@ -449,10 +449,11 @@ export function ThemePanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gradient">Gradiente</SelectItem>
-                    <SelectItem value="particles">Partículas</SelectItem>
-                    <SelectItem value="waves">Ondas</SelectItem>
-                    <SelectItem value="pulse">Pulsação</SelectItem>
+                    {LOOP_KIND_OPTIONS.filter((o) => o.value !== "none").map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Row>
