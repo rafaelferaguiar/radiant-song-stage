@@ -1,6 +1,6 @@
-# Retorno de palco + busca global
+# Retorno de palco, busca global e editor de loops
 
-Duas frentes: uma tela dedicada de retorno de palco (stage display) e uma busca universal por atalho.
+Três frentes principais: tela de retorno de palco, busca universal por atalho e um editor de fundos interativos (loops visuais). Também inclui algumas ideias extras para igreja.
 
 ## 1. Retorno de palco (`/palco`)
 
@@ -26,9 +26,35 @@ Paleta de comandos por cima do estúdio:
 - Também aceita **comandos**: blackout, abertura/logo, congelar, abrir projeção, abrir retorno de palco, trocar tema (lista os temas salvos), iniciar/pausar cronômetro.
 - Ctrl+F é interceptado no estúdio; Esc fecha.
 
+## 3. Editor de loops interativos (fundos visuais)
+
+No painel de Tema, adicionar uma seção "Loops" além de "Cor", "Imagem" e "Vídeo". O usuário cria fundos animados direto no sistema:
+
+- **Tipos de loop:**
+  - **Gradiente animado**: duas ou mais cores, direção linear/radial, velocidade, suavização.
+  - **Partículas**: pontos, partículas suaves ou estrelas cadentes com parâmetros de velocidade, quantidade e cor.
+  - **Mesh/liquid**: ondas suaves, névoa ou camadas blendadas para um visual orgânico.
+  - **Pulsação**: loop que pulsa na batida (usa `bpm` da música para sincronizar velocidade).
+- **Blending e camadas**: possibilidade de sobrepor uma imagem ou vídeo por cima do loop com modos de blend (multiply, screen, overlay) e opacidade.
+- **Preset library**: loops salvos como temas (ex.: "Worship Blue", "Pôr do Sol Laranja", "Galáxia Suave") para reaproveitar.
+- **Performance**: renderização via `<canvas>` ou WebGL leve (sem Three.js pesado); opção de reduzir FPS em previews pequenos e desligar animação se a aba perder foco.
+
+## 4. Ideias extras para igreja
+
+Funcionalidades que complementam bem um sistema de projeção:
+
+- **Bíblia paralela**: abrir duas traduções lado a lado ao vivo, útil para pregação comparativa.
+- **Notificação de alertas rápidos**: avisos pontuais que aparecem sobre o slide atual (ex.: "Silencie o celular", "Último louvor", "Oferta").
+- **Teleprompter com rolagem automática**: no estúdio, rolar a letra conforme o bpm/tempo da música, facilitando para o operador.
+- **Agenda/escala do culto**: pré-programar toda a sequência do culto (louvor, palavra, oferta, ceia) com horários e responsáveis, ligando automaticamente ao repertório.
+- **Backup offline / cache local**: manter músicas e repertórios em `IndexedDB` para funcionar se a internet cair no meio do culto.
+- **Modo leitor de letras para tablet**: uma rota simples que mostra apenas a letra atual em tela cheia, para o ministério de louvor acompanhar.
+
 ## Detalhes técnicos
 
 - Estado ao vivo: estender `LiveState` em `src/lib/projection.ts` com `next` (próximo slide), `stage` (mensagem, notas, flags de exibição) e `timers` (início do culto, duração do item atual, timestamps de início/pausa). O `BroadcastChannel` já existente sincroniza tudo; `/projecao` ignora os campos de palco.
 - Nova rota `src/routes/palco.tsx` (sem chrome, assina o estado ao vivo). Timers derivados de timestamps para não dessincronizar entre janelas.
 - Busca: novo `src/components/studio/CommandPalette.tsx` usando o `Command` do shadcn; busca de músicas via nova server function em `src/lib/library.functions.ts` com `ilike` em título/letra (retornando um trecho de contexto), busca bíblica reaproveitando `src/lib/bible.functions.ts`.
 - Duração dos itens: guardada em `setlist_items.payload` (`durationMin`), sem migração de schema; nova função de update no `library.functions.ts`.
+- Loops: criar `src/lib/loops.ts` com funções de renderização em canvas; `ThemeConfig` ganha campos de loop (`loopKind`, `loopColors`, `loopSpeed`, `loopOverlay`, `loopBlend`). Os loops são armazenados como JSON no tema e reproduzidos no `SlideCanvas` e na projeção.
+- O escopo deste plano prioriza **retorno de palco**, **busca global** e **editor de loops**. As ideias extras podem ser adicionadas depois, conforme prioridade.
