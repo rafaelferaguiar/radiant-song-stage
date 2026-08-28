@@ -64,7 +64,7 @@ export function renderLoop(
       ctx.lineTo(w, h);
       ctx.closePath();
       ctx.fillStyle = colorWithAlpha(
-        colors[(i + 1) % colors.length],
+        colors[(i + 1) % colors.length] ?? theme.fg ?? "#ffffff",
         0.2 + 0.1 * Math.sin(t + i),
       );
       ctx.fill();
