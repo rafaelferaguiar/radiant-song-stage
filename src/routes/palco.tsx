@@ -169,8 +169,9 @@ function ServiceTimer({ timers }: { timers: LiveState["timers"] }) {
 
   const elapsed = useMemo(() => {
     if (!timers.serviceStartedAt) return 0;
-    const pausedFor = timers.pausedAt ? now - timers.pausedAt : 0;
-    return (timers.pausedAt ? timers.pausedAt : now) - timers.serviceStartedAt - pausedFor;
+    const pausedFor = timers.servicePausedAt ? now - timers.servicePausedAt : 0;
+    const base = (timers.servicePausedAt ? timers.servicePausedAt : now) - timers.serviceStartedAt;
+    return base - pausedFor;
   }, [timers, now]);
 
   return (
@@ -190,8 +191,8 @@ function ItemTimer({ timers }: { timers: LiveState["timers"] }) {
 
   const remaining = useMemo(() => {
     if (!timers.itemStartedAt || !timers.itemDurationMin) return null;
-    const pausedFor = timers.pausedAt ? now - timers.pausedAt : 0;
-    const elapsed = (timers.pausedAt ? timers.pausedAt : now) - timers.itemStartedAt - pausedFor;
+    const pausedFor = timers.itemPausedAt ? now - timers.itemPausedAt : 0;
+    const elapsed = (timers.itemPausedAt ? timers.itemPausedAt : now) - timers.itemStartedAt - pausedFor;
     return timers.itemDurationMin * 60 * 1000 - elapsed;
   }, [timers, now]);
 
