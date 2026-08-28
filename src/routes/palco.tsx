@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { SlideCanvas } from "@/components/SlideCanvas";
-import type { LiveState } from "@/lib/projection";
+import type { LiveState, NamedTimer } from "@/lib/projection";
 import { DEFAULT_THEME, readLiveState, subscribeLiveState } from "@/lib/projection";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,9 @@ export const Route = createFileRoute("/palco")({
   head: () => ({
     meta: [
       { title: "Retorno de palco — Palco" },
-      { name: "description", content: "Monitor de retorno de palco com slide atual, próximo slide, timers e notas." },
+      { name: "description", content: "Monitor de retorno de palco com slide atual, próximo verso e timers." },
       { property: "og:title", content: "Retorno de palco — Palco" },
-      { property: "og:description", content: "Monitor de retorno de palco com slide atual, próximo slide, timers e notas." },
+      { property: "og:description", content: "Monitor de retorno de palco com slide atual, próximo verso e timers." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -31,20 +31,25 @@ function StagePage() {
   const theme = state.theme ?? DEFAULT_THEME;
   const isLyrics = state.slide?.kind === "lyrics";
   const nextSection = state.nextSection ?? (isLyrics ? state.next : null);
+  const activeTimers = (state.timers.items ?? []).filter((t) => t.startedAt);
+  const showHeader = state.stage.showClock || state.stage.showService || (state.stage.showTimers && activeTimers.length > 0);
 
   return (
     <div
       className="flex h-screen w-screen flex-col overflow-hidden"
       style={{ backgroundColor: "#0a0c12", color: "#e5e7eb" }}
     >
-      {/* Topo: relógio, timer do culto e mensagem de palco */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-black/40 px-6">
-        <Clock />
-        <div className="flex items-center gap-6">
-          <ServiceTimer timers={state.timers} />
-          <ItemTimer timers={state.timers} />
-        </div>
-      </header>
+      {showHeader ? (
+        <header className="flex h-16 shrink-0 items-center justify-between gap-6 border-b border-white/10 bg-black/40 px-6">
+          {state.stage.showClock ? <Clock /> : <span />}
+          <div className="flex items-center gap-6">
+            {state.stage.showService ? <ServiceTimer timers={state.timers} /> : null}
+            {state.stage.showTimers
+              ? activeTimers.map((timer) => <ItemTimer key={timer.id} timer={timer} />)
+              : null}
+          </div>
+        </header>
+      ) : null}
 
       {/* Mensagem de palco piscante */}
       {state.stage.showMessage && state.stage.message ? (
@@ -59,16 +64,15 @@ function StagePage() {
         </div>
       ) : null}
 
-      {/* Conteúdo principal */}
       <main
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-1 gap-4 p-4",
-          isLyrics ? "md:grid-cols-[1fr_minmax(20rem,34%)]" : "md:grid-cols-[1fr_280px]",
+          "grid min-h-0 flex-1 gap-4 p-4",
+          isLyrics ? "grid-cols-1 md:grid-cols-[1fr_minmax(22rem,40%)]" : "grid-cols-1",
         )}
       >
         {/* Slide atual */}
         <section className="panel relative flex min-h-0 flex-col overflow-hidden rounded-xl">
-          <div className="flex flex-1 flex-col overflow-hidden rounded-lg">
+          <div className="relative flex flex-1 flex-col overflow-hidden rounded-lg">
             <SlideCanvas
               slide={state.slide}
               theme={theme}
@@ -89,65 +93,50 @@ function StagePage() {
               </div>
             ) : null}
           </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between px-3 py-2 text-xs text-white/50">
             <span>Slide atual</span>
             <span>{state.slide?.label ?? state.slide?.title ?? "—"}</span>
           </div>
         </section>
 
-        {/* Coluna lateral: próxima seção (só em música) + metadados */}
-        <aside className="flex min-h-0 flex-col gap-4">
-          {isLyrics ? (
+        {/* Próximo verso — apenas para músicas */}
+        {isLyrics ? (
+          <aside className="flex min-h-0 flex-col gap-4">
             <section className="panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
-              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs font-medium uppercase tracking-wider text-white/50">
                 <span>Próxima parte</span>
                 <span className="text-primary">{nextSection?.label ?? "—"}</span>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 px-4 py-4">
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 px-5 py-5">
                 {nextSection?.lines.length ? (
                   nextSection.lines.map((line, i) => (
-                    <p
-                      key={`${line}-${i}`}
-                      className="text-[clamp(1.25rem,2.4vw,2.4rem)] font-bold leading-tight"
-                    >
+                    <p key={`${line}-${i}`} className="text-[clamp(1.5rem,3.2vw,3.2rem)] font-bold leading-tight">
                       {line}
                     </p>
                   ))
                 ) : (
-                  <p className="text-center text-lg text-muted-foreground">Fim da música</p>
+                  <p className="text-center text-lg text-white/40">Fim da música</p>
                 )}
               </div>
               {nextSection?.songKey && nextSection.songKey !== state.songKey ? (
                 <div className="border-t border-white/10 px-3 py-2 text-sm">
-                  Tom da próxima parte:{" "}
-                  <span className="font-bold text-primary">{nextSection.songKey}</span>
+                  Tom da próxima parte: <span className="font-bold text-primary">{nextSection.songKey}</span>
                 </div>
               ) : null}
             </section>
-          ) : null}
-
-
-          <section className="panel flex flex-col gap-3 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Tom</span>
-              <span className="rounded bg-primary/20 px-2 py-0.5 font-semibold text-primary">
-                {state.songKey || "—"}
-              </span>
-            </div>
-            {state.bpm ? (
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">BPM</span>
-                <span className="font-semibold">{state.bpm}</span>
-              </div>
-            ) : null}
             {state.stage.showNotes && state.notes ? (
-              <div className="mt-1 border-t border-white/10 pt-3">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">Observações</span>
+              <section className="panel rounded-xl p-4">
+                <span className="text-xs uppercase tracking-wider text-white/50">Observações</span>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{state.notes}</p>
-              </div>
+              </section>
             ) : null}
+          </aside>
+        ) : state.stage.showNotes && state.notes ? (
+          <section className="panel rounded-xl p-4">
+            <span className="text-xs uppercase tracking-wider text-white/50">Observações</span>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{state.notes}</p>
           </section>
-        </aside>
+        ) : null}
       </main>
     </div>
   );
@@ -176,41 +165,39 @@ function formatDuration(totalSeconds: number) {
   return `${sign}${m}:${String(s).padStart(2, "0")}`;
 }
 
-function ServiceTimer({ timers }: { timers: LiveState["timers"] }) {
+function useTick() {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+  return now;
+}
 
+function ServiceTimer({ timers }: { timers: LiveState["timers"] }) {
+  const now = useTick();
   const elapsed = useMemo(() => {
     if (!timers.serviceStartedAt) return 0;
-    const pausedFor = timers.servicePausedAt ? now - timers.servicePausedAt : 0;
-    const base = (timers.servicePausedAt ? timers.servicePausedAt : now) - timers.serviceStartedAt;
-    return base - pausedFor;
+    const base = (timers.servicePausedAt ?? now) - timers.serviceStartedAt;
+    return base;
   }, [timers, now]);
 
   return (
     <div className="text-center">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Culto</div>
+      <div className="text-[10px] uppercase tracking-wider text-white/50">Culto</div>
       <div className="text-xl font-bold tabular-nums">{formatDuration(Math.floor(elapsed / 1000))}</div>
     </div>
   );
 }
 
-function ItemTimer({ timers }: { timers: LiveState["timers"] }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
+function ItemTimer({ timer }: { timer: NamedTimer }) {
+  const now = useTick();
   const remaining = useMemo(() => {
-    if (!timers.itemStartedAt || !timers.itemDurationMin) return null;
-    const pausedFor = timers.itemPausedAt ? now - timers.itemPausedAt : 0;
-    const elapsed = (timers.itemPausedAt ? timers.itemPausedAt : now) - timers.itemStartedAt - pausedFor;
-    return timers.itemDurationMin * 60 * 1000 - elapsed;
-  }, [timers, now]);
+    if (!timer.startedAt) return null;
+    const elapsed = (timer.pausedAt ?? now) - timer.startedAt;
+    if (!timer.durationMin) return -elapsed; // contagem crescente quando sem duração
+    return timer.durationMin * 60 * 1000 - elapsed;
+  }, [timer, now]);
 
   if (remaining === null) return null;
   const seconds = Math.floor(remaining / 1000);
@@ -219,7 +206,7 @@ function ItemTimer({ timers }: { timers: LiveState["timers"] }) {
 
   return (
     <div className="text-center">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</div>
+      <div className="max-w-[10rem] truncate text-[10px] uppercase tracking-wider text-white/50">{timer.name}</div>
       <div
         className={cn(
           "text-xl font-bold tabular-nums",
