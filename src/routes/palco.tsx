@@ -58,7 +58,12 @@ function StagePage() {
       ) : null}
 
       {/* Conteúdo principal */}
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 md:grid-cols-[1fr_320px]">
+      <main
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-1 gap-4 p-4",
+          isLyrics ? "md:grid-cols-[1fr_minmax(20rem,34%)]" : "md:grid-cols-[1fr_280px]",
+        )}
+      >
         {/* Slide atual */}
         <section className="panel relative flex min-h-0 flex-col overflow-hidden rounded-xl">
           <div className="flex flex-1 flex-col overflow-hidden rounded-lg">
