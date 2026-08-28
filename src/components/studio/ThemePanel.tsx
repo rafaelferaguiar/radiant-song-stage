@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Pencil, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { SlideCanvas } from "@/components/SlideCanvas";
