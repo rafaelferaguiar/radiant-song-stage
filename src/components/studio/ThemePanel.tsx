@@ -421,6 +421,11 @@ export function ThemePanel({
 
           {theme.bgKind === "loop" ? (
             <div className="space-y-2">
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link to="/loops">
+                  <Sparkles className="mr-1 size-3.5" /> Abrir criador de loops
+                </Link>
+              </Button>
               <div className="grid grid-cols-3 gap-1.5">
                 {LOOP_PRESETS.map((preset) => (
                   <button
