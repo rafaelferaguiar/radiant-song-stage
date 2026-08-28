@@ -63,6 +63,7 @@ export function SetlistPanel({
   const removeItem = useServerFn(removeSetlistItem);
   const reorder = useServerFn(reorderSetlistItems);
   const addItem = useServerFn(addSetlistItem);
+  const editItem = useServerFn(updateSetlistItem);
 
   const { data: setlists = [] } = useQuery({ queryKey: ["setlists"], queryFn: () => fetchSetlists() });
   const { data: songs = [] } = useQuery({ queryKey: ["songs"], queryFn: () => fetchSongs() });
