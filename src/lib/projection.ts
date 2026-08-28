@@ -1,4 +1,4 @@
-export type SlideKind = "lyrics" | "bible" | "text";
+export type SlideKind = "lyrics" | "bible" | "text" | "media";
 
 export interface ProjectionSlide {
   id: string;
@@ -7,6 +7,10 @@ export interface ProjectionSlide {
   title?: string;
   lines: string[];
   footer?: string;
+  /** mídia projetada em tela cheia (kind === "media") */
+  mediaUrl?: string;
+  mediaKind?: "image" | "video";
+  mediaFit?: "cover" | "contain";
   /** chave normalizada da seção (verso/refrão) a que este slide pertence */
   sectionKey?: string;
   /** tom específico desta seção, quando definido no editor da música */
