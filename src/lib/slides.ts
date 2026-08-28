@@ -103,7 +103,7 @@ export function buildSongSlides(song: SongLike, linesPerSlide = 4): ProjectionSl
         lines,
         footer: [song.title, song.artist].filter(Boolean).join(" • "),
         sectionKey: key,
-        songKey: config.songKey || song.song_key || undefined,
+        ...(config.songKey || song.song_key ? { songKey: config.songKey || song.song_key || "" } : {}),
         ...(override ? { themeOverride: override } : {}),
       });
     });
