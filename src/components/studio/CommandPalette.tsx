@@ -97,7 +97,7 @@ export function CommandPalette({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <Command shouldFilter={false} loop>
+      <CommandRoot shouldFilter={false} loop>
         <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <CommandInput
@@ -182,7 +182,7 @@ export function CommandPalette({
             Nada encontrado. Tente um trecho de letra, nome da música ou referência bíblica.
           </CommandEmpty>
         </CommandList>
-      </Command>
+      </CommandRoot>
     </CommandDialog>
   );
 }
