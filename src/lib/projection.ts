@@ -233,14 +233,35 @@ export interface StageState {
   blink: boolean;
   showNotes: boolean;
   showTimers: boolean;
+  /** relógio no topo do retorno de palco */
+  showClock: boolean;
+  /** timer de duração do culto */
+  showService: boolean;
+}
+
+/** timer nomeado, criado livremente pelo operador (ex: "Pregação") */
+export interface NamedTimer {
+  id: string;
+  name: string;
+  durationMin: number | null;
+  startedAt: number | null;
+  pausedAt: number | null;
+}
+
+export function createNamedTimer(name = "Novo timer", durationMin: number | null = 10): NamedTimer {
+  return {
+    id: `timer-${Math.random().toString(36).slice(2, 9)}`,
+    name,
+    durationMin,
+    startedAt: null,
+    pausedAt: null,
+  };
 }
 
 export interface TimerState {
   serviceStartedAt: number | null;
   servicePausedAt: number | null;
-  itemStartedAt: number | null;
-  itemDurationMin: number | null;
-  itemPausedAt: number | null;
+  items: NamedTimer[];
 }
 
 export interface LiveState {
