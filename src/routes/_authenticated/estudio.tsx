@@ -154,7 +154,7 @@ function Studio() {
       notes,
       updatedAt: Date.now(),
     }),
-    [liveSlide, deck, previewIndex, blackout, showLogo, logoText, theme, stage, timers, songKey, bpm, notes, freeze],
+    [liveSlide, deck, previewIndex, nextSectionSlide, blackout, showLogo, logoText, theme, stage, timers, songKey, bpm, notes, freeze],
   );
 
   useEffect(() => {
