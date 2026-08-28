@@ -24,7 +24,30 @@ export interface DeckMeta {
 }
 
 export type BackgroundKind = "none" | "image" | "video" | "loop";
-export type LoopKind = "none" | "gradient" | "particles" | "waves" | "pulse";
+export type LoopKind =
+  | "none"
+  | "gradient"
+  | "particles"
+  | "waves"
+  | "pulse"
+  | "aurora"
+  | "blobs"
+  | "bokeh"
+  | "rays"
+  | "grid";
+
+export const LOOP_KIND_OPTIONS: { value: LoopKind; label: string }[] = [
+  { value: "none", label: "Nenhum" },
+  { value: "gradient", label: "Gradiente" },
+  { value: "particles", label: "Partículas" },
+  { value: "waves", label: "Ondas" },
+  { value: "pulse", label: "Pulsação" },
+  { value: "aurora", label: "Aurora" },
+  { value: "blobs", label: "Bolhas líquidas" },
+  { value: "bokeh", label: "Bokeh" },
+  { value: "rays", label: "Raios de luz" },
+  { value: "grid", label: "Grade" },
+];
 export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
 
 export interface ThemeConfig {
