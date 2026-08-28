@@ -325,7 +325,11 @@ export function readLiveState(): LiveState {
       ...parsed,
       theme: { ...DEFAULT_THEME, ...(parsed.theme ?? {}) },
       stage: { ...INITIAL_LIVE_STATE.stage, ...(parsed.stage ?? {}) },
-      timers: { ...INITIAL_LIVE_STATE.timers, ...(parsed.timers ?? {}) },
+      timers: {
+        ...INITIAL_LIVE_STATE.timers,
+        ...(parsed.timers ?? {}),
+        items: parsed.timers?.items ?? [],
+      },
     };
   } catch {
     return INITIAL_LIVE_STATE;
