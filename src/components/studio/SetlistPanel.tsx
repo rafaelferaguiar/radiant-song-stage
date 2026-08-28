@@ -216,7 +216,25 @@ export function SetlistPanel({
                     <Icon className="size-3.5 text-primary" />
                     <span className="truncate">{item.title}</span>
                   </button>
-                  <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <input
+                      type="number"
+                      min={0}
+                      value={Number(item.payload["durationMin"]) || ""}
+                      onChange={async (e) => {
+                        const v = e.target.value;
+                        await editItem({
+                          data: {
+                            id: item.id,
+                            payload: { ...item.payload, durationMin: v ? Number(v) : null },
+                          },
+                        });
+                        invalidate();
+                      }}
+                      className="h-7 w-16 rounded border border-border bg-background px-1.5 text-xs"
+                      placeholder="min"
+                      title="Duração estimada em minutos"
+                    />
                     <Button variant="ghost" size="icon" className="size-6" onClick={() => void move(index, -1)}>
                       <ArrowUp className="size-3" />
                     </Button>
