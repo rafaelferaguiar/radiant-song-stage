@@ -89,7 +89,17 @@ export function SongsPanel({ linesPerSlide, onOpenDeck, onAddToSetlist }: SongsP
                 <button
                   type="button"
                   className="w-full text-left"
-                  onClick={() => onOpenDeck(song.title, buildSongSlides(song, linesPerSlide))}
+                  onClick={() =>
+                    onOpenDeck(
+                      {
+                        title: song.title,
+                        songKey: song.song_key,
+                        bpm: song.bpm,
+                        notes: song.notes,
+                      },
+                      buildSongSlides(song, linesPerSlide),
+                    )
+                  }
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <Music4 className="size-3.5 text-primary" />
