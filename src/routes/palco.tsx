@@ -29,6 +29,8 @@ function StagePage() {
   }, []);
 
   const theme = state.theme ?? DEFAULT_THEME;
+  const isLyrics = state.slide?.kind === "lyrics";
+  const nextSection = state.nextSection ?? (isLyrics ? state.next : null);
 
   return (
     <div
