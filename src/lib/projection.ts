@@ -204,6 +204,8 @@ export interface TimerState {
 export interface LiveState {
   slide: ProjectionSlide | null;
   next: ProjectionSlide | null;
+  /** primeiro slide da próxima seção (próximo verso) — usado no retorno de palco */
+  nextSection: ProjectionSlide | null;
   blackout: boolean;
   freeze: boolean;
   showLogo: boolean;
