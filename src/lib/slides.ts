@@ -1,4 +1,4 @@
-import type { ProjectionSlide } from "./projection";
+import type { ProjectionSlide, ThemeConfig } from "./projection";
 
 export interface LyricSection {
   label: string;
@@ -58,19 +58,43 @@ export function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
+export interface SectionConfig {
+  /** tom específico desta seção */
+  songKey?: string;
+  /** linhas por slide apenas nesta seção */
+  linesPerSlide?: number | null;
+  /** id do tema salvo usado como base desta seção (apenas informativo na UI) */
+  themeId?: string | null;
+  /** ajustes de tema desta seção */
+  theme?: Partial<ThemeConfig>;
+}
+
+export type SectionConfigMap = Record<string, SectionConfig>;
+
 export interface SongLike {
   id?: string;
   title: string;
   artist?: string;
+  song_key?: string;
   lyrics: string;
   arrangement?: string[];
+  sections?: SectionConfigMap;
 }
 
 export function buildSongSlides(song: SongLike, linesPerSlide = 4): ProjectionSlide[] {
   const sections = applyArrangement(parseSections(song.lyrics), song.arrangement ?? []);
+  const configs = song.sections ?? {};
   const slides: ProjectionSlide[] = [];
   sections.forEach((section, si) => {
-    chunk(section.lines, linesPerSlide).forEach((lines, ci) => {
+    const key = sectionKey(section.label);
+    const config = configs[key] ?? {};
+    const perSlide =
+      config.linesPerSlide && config.linesPerSlide > 0 ? config.linesPerSlide : linesPerSlide;
+    const override =
+      config.theme && Object.keys(config.theme).length
+        ? config.theme
+        : undefined;
+    chunk(section.lines, perSlide).forEach((lines, ci) => {
       slides.push({
         id: `${song.id ?? "song"}-${si}-${ci}`,
         kind: "lyrics",
@@ -78,6 +102,9 @@ export function buildSongSlides(song: SongLike, linesPerSlide = 4): ProjectionSl
         title: song.title,
         lines,
         footer: [song.title, song.artist].filter(Boolean).join(" • "),
+        sectionKey: key,
+        ...(config.songKey || song.song_key ? { songKey: config.songKey || song.song_key || "" } : {}),
+        ...(override ? { themeOverride: override } : {}),
       });
     });
   });

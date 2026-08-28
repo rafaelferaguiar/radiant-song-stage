@@ -10,16 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { deleteSong, listSongs, type SongRecord } from "@/lib/library.functions";
 import { buildSongSlides } from "@/lib/slides";
-import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
+import type { DeckMeta, ProjectionSlide, ThemeConfig } from "@/lib/projection";
 import { SongEditor } from "./SongEditor";
 
 interface SongsPanelProps {
   linesPerSlide: number;
+  theme?: ThemeConfig;
   onOpenDeck: (meta: DeckMeta, slides: ProjectionSlide[]) => void;
   onAddToSetlist?: (song: SongRecord) => void;
 }
 
-export function SongsPanel({ linesPerSlide, onOpenDeck, onAddToSetlist }: SongsPanelProps) {
+export function SongsPanel({ linesPerSlide, theme, onOpenDeck, onAddToSetlist }: SongsPanelProps) {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<SongRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -158,7 +159,7 @@ export function SongsPanel({ linesPerSlide, onOpenDeck, onAddToSetlist }: SongsP
         )}
       </ScrollArea>
 
-      <SongEditor open={editorOpen} song={editing} onOpenChange={setEditorOpen} />
+      <SongEditor open={editorOpen} song={editing} baseTheme={theme} onOpenChange={setEditorOpen} />
     </div>
   );
 }

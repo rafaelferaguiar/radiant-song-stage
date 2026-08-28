@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Pencil, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { SlideCanvas } from "@/components/SlideCanvas";
@@ -21,6 +22,7 @@ import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/libra
 import {
   DEFAULT_THEME,
   FONT_OPTIONS,
+  LOOP_KIND_OPTIONS,
   LOOP_PRESETS,
   type BlendMode,
   type LoopKind,
@@ -420,6 +422,11 @@ export function ThemePanel({
 
           {theme.bgKind === "loop" ? (
             <div className="space-y-2">
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link to="/loops">
+                  <Sparkles className="mr-1 size-3.5" /> Abrir criador de loops
+                </Link>
+              </Button>
               <div className="grid grid-cols-3 gap-1.5">
                 {LOOP_PRESETS.map((preset) => (
                   <button
@@ -449,10 +456,11 @@ export function ThemePanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gradient">Gradiente</SelectItem>
-                    <SelectItem value="particles">Partículas</SelectItem>
-                    <SelectItem value="waves">Ondas</SelectItem>
-                    <SelectItem value="pulse">Pulsação</SelectItem>
+                    {LOOP_KIND_OPTIONS.filter((o) => o.value !== "none").map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Row>

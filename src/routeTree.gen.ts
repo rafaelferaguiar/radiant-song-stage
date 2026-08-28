@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PalcoRouteImport } from './routes/palco'
 import { Route as ProjecaoRouteImport } from './routes/projecao'
 import { Route as AuthenticatedEstudioRouteImport } from './routes/_authenticated/estudio'
+import { Route as AuthenticatedLoopsRouteImport } from './routes/_authenticated/loops'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +46,11 @@ const AuthenticatedEstudioRoute = AuthenticatedEstudioRouteImport.update({
   path: '/estudio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLoopsRoute = AuthenticatedLoopsRouteImport.update({
+  id: '/loops',
+  path: '/loops',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/estudio': typeof AuthenticatedEstudioRoute
+  '/loops': typeof AuthenticatedLoopsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/estudio': typeof AuthenticatedEstudioRoute
+  '/loops': typeof AuthenticatedLoopsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,13 @@ export interface FileRoutesById {
   '/palco': typeof PalcoRoute
   '/projecao': typeof ProjecaoRoute
   '/_authenticated/estudio': typeof AuthenticatedEstudioRoute
+  '/_authenticated/loops': typeof AuthenticatedLoopsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/palco' | '/projecao' | '/estudio'
+  fullPaths: '/' | '/auth' | '/palco' | '/projecao' | '/estudio' | '/loops'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/palco' | '/projecao' | '/estudio'
+  to: '/' | '/auth' | '/palco' | '/projecao' | '/estudio' | '/loops'
   id:
     | '__root__'
     | '/'
@@ -82,6 +91,7 @@ export interface FileRouteTypes {
     | '/palco'
     | '/projecao'
     | '/_authenticated/estudio'
+    | '/_authenticated/loops'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -136,15 +146,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEstudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/loops': {
+      id: '/_authenticated/loops'
+      path: '/loops'
+      fullPath: '/loops'
+      preLoaderRoute: typeof AuthenticatedLoopsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedEstudioRoute: typeof AuthenticatedEstudioRoute
+  AuthenticatedLoopsRoute: typeof AuthenticatedLoopsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEstudioRoute: AuthenticatedEstudioRoute,
+  AuthenticatedLoopsRoute: AuthenticatedLoopsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

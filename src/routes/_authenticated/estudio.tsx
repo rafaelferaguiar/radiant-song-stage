@@ -125,10 +125,23 @@ function Studio() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // primeiro slide da próxima seção distinta (usado no retorno de palco)
+  const nextSectionSlide = useMemo(() => {
+    const current = deck[previewIndex];
+    if (!current || current.kind !== "lyrics") return null;
+    const key = current.sectionKey;
+    for (let i = previewIndex + 1; i < deck.length; i++) {
+      const candidate = deck[i];
+      if (candidate && candidate.sectionKey !== key) return candidate;
+    }
+    return null;
+  }, [deck, previewIndex]);
+
   const state: LiveState = useMemo(
     () => ({
       slide: liveSlide,
       next: deck[previewIndex + 1] ?? null,
+      nextSection: nextSectionSlide,
       blackout,
       freeze,
       showLogo,
@@ -141,7 +154,7 @@ function Studio() {
       notes,
       updatedAt: Date.now(),
     }),
-    [liveSlide, deck, previewIndex, blackout, showLogo, logoText, theme, stage, timers, songKey, bpm, notes, freeze],
+    [liveSlide, deck, previewIndex, nextSectionSlide, blackout, showLogo, logoText, theme, stage, timers, songKey, bpm, notes, freeze],
   );
 
   useEffect(() => {
@@ -406,6 +419,7 @@ function Studio() {
               <TabsContent value="musicas" className="mt-3 min-h-0 flex-1">
                 <SongsPanel
                   linesPerSlide={linesPerSlide}
+                  theme={theme}
                   onOpenDeck={openDeck}
                   onAddToSetlist={addSongToSetlist}
                 />

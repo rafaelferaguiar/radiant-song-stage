@@ -7,6 +7,12 @@ export interface ProjectionSlide {
   title?: string;
   lines: string[];
   footer?: string;
+  /** chave normalizada da seção (verso/refrão) a que este slide pertence */
+  sectionKey?: string;
+  /** tom específico desta seção, quando definido no editor da música */
+  songKey?: string;
+  /** ajustes de tema aplicados apenas a este slide/seção */
+  themeOverride?: Partial<ThemeConfig>;
 }
 
 export interface DeckMeta {
@@ -18,7 +24,30 @@ export interface DeckMeta {
 }
 
 export type BackgroundKind = "none" | "image" | "video" | "loop";
-export type LoopKind = "none" | "gradient" | "particles" | "waves" | "pulse";
+export type LoopKind =
+  | "none"
+  | "gradient"
+  | "particles"
+  | "waves"
+  | "pulse"
+  | "aurora"
+  | "blobs"
+  | "bokeh"
+  | "rays"
+  | "grid";
+
+export const LOOP_KIND_OPTIONS: { value: LoopKind; label: string }[] = [
+  { value: "none", label: "Nenhum" },
+  { value: "gradient", label: "Gradiente" },
+  { value: "particles", label: "Partículas" },
+  { value: "waves", label: "Ondas" },
+  { value: "pulse", label: "Pulsação" },
+  { value: "aurora", label: "Aurora" },
+  { value: "blobs", label: "Bolhas líquidas" },
+  { value: "bokeh", label: "Bokeh" },
+  { value: "rays", label: "Raios de luz" },
+  { value: "grid", label: "Grade" },
+];
 export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
 
 export interface ThemeConfig {
@@ -175,6 +204,8 @@ export interface TimerState {
 export interface LiveState {
   slide: ProjectionSlide | null;
   next: ProjectionSlide | null;
+  /** primeiro slide da próxima seção (próximo verso) — usado no retorno de palco */
+  nextSection: ProjectionSlide | null;
   blackout: boolean;
   freeze: boolean;
   showLogo: boolean;
@@ -194,6 +225,7 @@ const CHANNEL = "spresenter:live";
 export const INITIAL_LIVE_STATE: LiveState = {
   slide: null,
   next: null,
+  nextSection: null,
   blackout: false,
   freeze: false,
   showLogo: false,

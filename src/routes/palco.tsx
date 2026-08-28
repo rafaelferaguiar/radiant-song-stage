@@ -29,6 +29,8 @@ function StagePage() {
   }, []);
 
   const theme = state.theme ?? DEFAULT_THEME;
+  const isLyrics = state.slide?.kind === "lyrics";
+  const nextSection = state.nextSection ?? (isLyrics ? state.next : null);
 
   return (
     <div
@@ -58,7 +60,12 @@ function StagePage() {
       ) : null}
 
       {/* Conteúdo principal */}
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 md:grid-cols-[1fr_320px]">
+      <main
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-1 gap-4 p-4",
+          isLyrics ? "md:grid-cols-[1fr_minmax(20rem,34%)]" : "md:grid-cols-[1fr_280px]",
+        )}
+      >
         {/* Slide atual */}
         <section className="panel relative flex min-h-0 flex-col overflow-hidden rounded-xl">
           <div className="flex flex-1 flex-col overflow-hidden rounded-lg">
@@ -88,28 +95,37 @@ function StagePage() {
           </div>
         </section>
 
-        {/* Coluna lateral: próximo slide + metadados */}
+        {/* Coluna lateral: próxima seção (só em música) + metadados */}
         <aside className="flex min-h-0 flex-col gap-4">
-          <section className="panel flex flex-col overflow-hidden rounded-xl">
-            <div className="border-b border-white/10 px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Próximo slide
-            </div>
-            <div className="flex-1 p-2">
-              <div className="aspect-video w-full overflow-hidden rounded-lg">
-                <SlideCanvas
-                  slide={state.next}
-                  theme={theme}
-                  blackout={false}
-                  showLogo={false}
-                  className="h-full w-full"
-                  media={false}
-                />
+          {isLyrics ? (
+            <section className="panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <span>Próxima parte</span>
+                <span className="text-primary">{nextSection?.label ?? "—"}</span>
               </div>
-            </div>
-            <div className="px-3 pb-2 text-xs text-muted-foreground">
-              {state.next?.label ?? state.next?.title ?? "Fim do item"}
-            </div>
-          </section>
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 px-4 py-4">
+                {nextSection?.lines.length ? (
+                  nextSection.lines.map((line, i) => (
+                    <p
+                      key={`${line}-${i}`}
+                      className="text-[clamp(1.25rem,2.4vw,2.4rem)] font-bold leading-tight"
+                    >
+                      {line}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-center text-lg text-muted-foreground">Fim da música</p>
+                )}
+              </div>
+              {nextSection?.songKey && nextSection.songKey !== state.songKey ? (
+                <div className="border-t border-white/10 px-3 py-2 text-sm">
+                  Tom da próxima parte:{" "}
+                  <span className="font-bold text-primary">{nextSection.songKey}</span>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
 
           <section className="panel flex flex-col gap-3 rounded-xl p-4">
             <div className="flex items-center justify-between">

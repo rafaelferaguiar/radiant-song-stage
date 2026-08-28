@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SectionConfigMap } from "@/lib/slides";
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
@@ -15,6 +16,7 @@ export interface SongRecord {
   lyrics: string;
   arrangement: string[];
   notes: string;
+  sections: SectionConfigMap;
   updated_at: string;
 }
 
@@ -52,6 +54,7 @@ const songInput = (input: {
   lyrics?: string;
   arrangement?: string[];
   notes?: string;
+  sections?: SectionConfigMap;
 }) => ({
   id: input.id ?? null,
   title: String(input.title).trim().slice(0, 200) || "Sem título",
@@ -63,6 +66,7 @@ const songInput = (input: {
   lyrics: String(input.lyrics ?? "").slice(0, 20000),
   arrangement: (input.arrangement ?? []).slice(0, 60).map((t) => String(t).slice(0, 40)),
   notes: String(input.notes ?? "").slice(0, 4000),
+  sections: (input.sections ?? {}) as JsonObject,
 });
 
 export const listSongs = createServerFn({ method: "GET" })
@@ -70,7 +74,7 @@ export const listSongs = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<SongRecord[]> => {
     const { data, error } = await context.supabase
       .from("songs")
-      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, sections, updated_at")
       .order("title", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as SongRecord[];
@@ -86,7 +90,7 @@ export const saveSong = createServerFn({ method: "POST" })
         .from("songs")
         .update(values)
         .eq("id", id)
-        .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+        .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, sections, updated_at")
         .single();
       if (error) throw new Error(error.message);
       return row as SongRecord;
@@ -94,7 +98,7 @@ export const saveSong = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("songs")
       .insert({ ...values, user_id: context.userId })
-      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, sections, updated_at")
       .single();
     if (error) throw new Error(error.message);
     return row as SongRecord;
@@ -247,14 +251,14 @@ export const searchSongs = createServerFn({ method: "GET" })
     const terms = q.split(/\s+/).map((t) => `${t}:*`).join(" & ");
     const { data: rows, error } = await context.supabase
       .from("songs")
-      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+      .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, sections, updated_at")
       .textSearch("search_vector", terms)
       .limit(12);
     if (error) {
       // fallback simples se search_vector não existir ainda
       const { data: fallback, error: fallbackError } = await context.supabase
         .from("songs")
-        .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, updated_at")
+        .select("id, title, artist, song_key, bpm, ccli, tags, lyrics, arrangement, notes, sections, updated_at")
         .or(`title.ilike.%${q}%,artist.ilike.%${q}%,lyrics.ilike.%${q}%`)
         .limit(12);
       if (fallbackError) throw new Error(fallbackError.message);
