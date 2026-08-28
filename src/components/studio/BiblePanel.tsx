@@ -146,7 +146,7 @@ export function BiblePanel({ versesPerSlide, onOpenDeck, onSendSlide, onAddToSet
             <Button
               size="sm"
               className="flex-1"
-              onClick={() => onOpenDeck(`${reference} (${translationLabel})`, chapterSlides)}
+              onClick={() => onOpenDeck({ title: `${reference} (${translationLabel})` }, chapterSlides)}
               disabled={!verses.length}
             >
               <BookOpen className="size-3.5" /> Abrir capítulo
