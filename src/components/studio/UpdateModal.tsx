@@ -61,9 +61,13 @@ export function UpdateModal({
         onStatusChange({ status: "not-available", version: currentVersion });
         toast.info(res.message || "Modo de desenvolvimento.");
       } else if (res.error) {
-        setManualMessage(`Falha ao conectar: ${res.error}`);
-        onStatusChange({ status: "error", error: res.error });
-        toast.error("Não foi possível verificar atualizações no momento.");
+        let friendly = res.error;
+        if (res.error.includes("404") || res.error.includes("releases.atom")) {
+          friendly = "Nenhuma release publicada encontrada no GitHub (ou o repositório é privado). Torne o repositório público e publique a release v1.0.2 com os instaladores para liberar atualizações automáticas.";
+        }
+        setManualMessage(friendly);
+        onStatusChange({ status: "error", error: friendly });
+        toast.error("Não foi possível verificar atualizações.");
       } else if (res.success) {
         // Eventos IPC irão atualizar o status (available ou not-available)
       }

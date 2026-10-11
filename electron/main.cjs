@@ -97,8 +97,12 @@ autoUpdater.on("update-downloaded", (info) => {
 });
 
 autoUpdater.on("error", (err) => {
+  let errorMsg = err == null ? "Erro desconhecido" : (err.message || String(err));
+  if (errorMsg.includes("404") || errorMsg.includes("releases.atom")) {
+    errorMsg = "Nenhuma release publicada encontrada no GitHub (ou o repositório está privado). Para que as atualizações automáticas funcionem para todos, torne o repositório público no GitHub e publique a release na página de Releases.";
+  }
   sendUpdaterStatus("error", {
-    error: err == null ? "Erro desconhecido" : (err.message || String(err)),
+    error: errorMsg,
   });
 });
 
