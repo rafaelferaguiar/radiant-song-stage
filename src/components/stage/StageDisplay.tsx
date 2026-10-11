@@ -147,20 +147,129 @@ export function BigItemTimer({ timer, scale = 1 }: { timer: NamedTimer; scale?: 
   );
 }
 
-// ─── Big Text Overlay ─────────────────────────────────────────────────────────
+// ─── Adaptive Lines Component (Auto-Fit for text blocks) ─────────────────────
+
+export function AdaptiveLines({
+  lines,
+  baseFontSize = "clamp(1.3rem, 2.8vw, 3rem)",
+  className,
+}: {
+  lines: string[];
+  baseFontSize?: string;
+  className?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content || !lines.length) {
+      setScale(1);
+      return;
+    }
+
+    const checkFit = () => {
+      content.style.transform = "none";
+      const cH = container.clientHeight;
+      const cW = container.clientWidth;
+      const sH = content.scrollHeight;
+      const sW = content.scrollWidth;
+
+      if (cH > 0 && cW > 0 && sH > 0 && sW > 0) {
+        const scaleH = (cH * 0.95) / sH;
+        const scaleW = (cW * 0.98) / sW;
+        setScale(Math.min(scaleH, scaleW, 1));
+      } else {
+        setScale(1);
+      }
+    };
+
+    checkFit();
+    const ro = new ResizeObserver(checkFit);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [lines]);
+
+  return (
+    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden w-full">
+      <div
+        ref={contentRef}
+        className="flex flex-col gap-2 w-full"
+        style={{
+          transform: scale < 1 ? `scale(${scale})` : undefined,
+          transformOrigin: "center left",
+          transition: "transform 0.1s ease-out",
+        }}
+      >
+        {lines.map((line, i) => (
+          <p
+            key={`${line}-${i}`}
+            style={{ fontSize: baseFontSize, lineHeight: 1.25 }}
+            className={cn("font-bold text-white/95 leading-tight", className)}
+          >
+            {line}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Big Text Overlay (Auto-Fit Scale) ────────────────────────────────────────
 
 export function BigTextOverlay({ text }: { text: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLParagraphElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content || !text) {
+      setScale(1);
+      return;
+    }
+
+    const checkFit = () => {
+      content.style.transform = "none";
+      const cH = container.clientHeight;
+      const cW = container.clientWidth;
+      const sH = content.scrollHeight;
+      const sW = content.scrollWidth;
+
+      if (cH > 0 && cW > 0 && sH > 0 && sW > 0) {
+        const scaleH = (cH * 0.92) / sH;
+        const scaleW = (cW * 0.94) / sW;
+        setScale(Math.min(scaleH, scaleW, 1));
+      } else {
+        setScale(1);
+      }
+    };
+
+    checkFit();
+    const ro = new ResizeObserver(checkFit);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [text]);
+
   return (
     <div
-      className="absolute inset-0 z-40 flex h-full w-full items-center justify-center p-8 md:p-14"
+      ref={containerRef}
+      className="absolute inset-0 z-40 flex h-full w-full items-center justify-center p-6 md:p-12 overflow-hidden"
       style={{
         background: "radial-gradient(ellipse at center, #0f172a 0%, #050709 100%)",
       }}
     >
       <p
-        className="text-center font-bold text-white whitespace-pre-wrap max-w-[95%] leading-tight"
+        ref={contentRef}
+        className="text-center font-bold text-white whitespace-pre-wrap max-w-[96%] leading-tight"
         style={{
           fontSize: "clamp(2.5rem, 7vw, 9rem)",
+          transform: scale < 1 ? `scale(${scale})` : undefined,
+          transformOrigin: "center center",
+          transition: "transform 0.1s ease-out",
           textShadow: "0 0 80px rgba(99,102,241,0.5), 0 4px 32px rgba(0,0,0,0.8)",
           letterSpacing: "-0.02em",
           lineHeight: 1.15,
@@ -258,16 +367,8 @@ function StageTraditionalView({
                 <span>Próxima parte</span>
                 <span className="text-primary font-bold">{nextSection?.label ?? "—"}</span>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 px-6 py-4 overflow-hidden">
-                {nextSection.lines.map((line: string, i: number) => (
-                  <p
-                    key={`${line}-${i}`}
-                    style={{ fontSize: "clamp(1.3rem, 2.8vw, 3rem)", lineHeight: 1.25 }}
-                    className="font-bold text-white/95 leading-tight"
-                  >
-                    {line}
-                  </p>
-                ))}
+              <div className="flex min-h-0 flex-1 flex-col justify-center px-6 py-4 overflow-hidden">
+                <AdaptiveLines lines={nextSection.lines} />
               </div>
               {nextSection?.songKey && nextSection.songKey !== state.songKey ? (
                 <div className="border-t border-white/10 px-4 py-2 text-xs md:text-sm">
@@ -426,17 +527,10 @@ function StageCustomLayoutView({
               >
                 Próxima parte
               </div>
-              <div className="flex flex-1 flex-col justify-center gap-2 overflow-hidden">
-                {nextSection.lines.map((line: string, i: number) => (
-                  <p
-                    key={`${line}-${i}`}
-                    className="font-bold leading-tight text-white/95"
-                    style={{ fontSize: `clamp(1rem, ${2.5 * (widget.scale ?? 1)}vw, 3rem)` }}
-                  >
-                    {line}
-                  </p>
-                ))}
-              </div>
+              <AdaptiveLines
+                lines={nextSection.lines}
+                baseFontSize={`clamp(1rem, ${2.5 * (widget.scale ?? 1)}vw, 3rem)`}
+              />
             </div>
           );
         }

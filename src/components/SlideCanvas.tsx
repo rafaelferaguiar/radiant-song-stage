@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ProjectionLayer, ProjectionSlide, ThemeConfig } from "@/lib/projection";
@@ -253,13 +253,55 @@ function LyricsLayerView({
   empty: boolean;
   layer?: ProjectionLayer;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+
   const opacity = layer ? layer.opacity / 100 : 1;
   const blendMode = layer && layer.blend !== "normal" ? (layer.blend as any) : undefined;
 
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content || empty || !slide?.lines?.length) {
+      setFitScale(1);
+      return;
+    }
+
+    const computeFit = () => {
+      content.style.transform = "none";
+      const containerH = container.clientHeight;
+      const containerW = container.clientWidth;
+      const contentH = content.scrollHeight;
+      const contentW = content.scrollWidth;
+
+      if (containerH > 0 && containerW > 0 && contentH > 0 && contentW > 0) {
+        // Se ultrapassar a altura ou largura útil (com margem de 95% para segurança e respiro)
+        const scaleH = (containerH * 0.95) / contentH;
+        const scaleW = (containerW * 0.96) / contentW;
+        const targetScale = Math.min(scaleH, scaleW, 1);
+        setFitScale(targetScale);
+      } else {
+        setFitScale(1);
+      }
+    };
+
+    computeFit();
+    const ro = new ResizeObserver(() => computeFit());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [slide, theme, empty]);
+
+  const origin =
+    theme.vAlign === "center"
+      ? (theme.align === "center" ? "center center" : "left center")
+      : (theme.align === "center" ? "center bottom" : "left bottom");
+
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "pointer-events-none absolute inset-0 flex flex-col",
+        "pointer-events-none absolute inset-0 flex flex-col overflow-hidden",
         theme.vAlign === "center" ? "justify-center" : "justify-end",
         theme.align === "center" ? "items-center text-center" : "items-start text-left",
       )}
@@ -269,58 +311,67 @@ function LyricsLayerView({
         mixBlendMode: blendMode,
       }}
     >
-      {theme.showTitle && slide?.title ? (
-        <p
-          style={{
-            fontSize: `${Math.max(theme.fontSize * 0.4, 1.6)}cqw`,
-            color: theme.accentFg,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            marginBottom: "1.6cqw",
-            opacity: 0.9,
-          }}
-        >
-          {slide.title}
-        </p>
-      ) : null}
+      <div
+        ref={contentRef}
+        className="w-full flex flex-col"
+        style={{
+          transform: fitScale < 1 ? `scale(${fitScale})` : undefined,
+          transformOrigin: origin,
+          transition: "transform 0.1s ease-out",
+        }}
+      >
+        {theme.showTitle && slide?.title ? (
+          <p
+            style={{
+              fontSize: `${Math.max(theme.fontSize * 0.4, 1.6)}cqw`,
+              color: theme.accentFg,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              marginBottom: "1.6cqw",
+              opacity: 0.9,
+            }}
+          >
+            {slide.title}
+          </p>
+        ) : null}
 
-      {empty || !slide ? (
-        <p style={{ fontSize: "2.4cqw", opacity: 0.35 }}>Sem conteúdo na tela</p>
-      ) : (
-        <div className="w-full" style={{ display: "grid", gap: `${theme.lineHeight * 0.25}cqw` }}>
-          {slide.lines.map((line, index) => (
-            <p
-              key={`${slide.id}-${index}`}
-              style={{
-                fontSize: `${theme.fontSize}cqw`,
-                lineHeight: theme.lineHeight,
-                letterSpacing: `${theme.letterSpacing}em`,
-                fontWeight: theme.bold ? 700 : 400,
-                textTransform: theme.uppercase ? "uppercase" : "none",
-                textShadow: theme.shadow ? "0 0.35cqw 1.2cqw rgba(0,0,0,0.6)" : "none",
-                margin: 0,
-              }}
-            >
-              {line}
-            </p>
-          ))}
-        </div>
-      )}
+        {empty || !slide ? (
+          <p style={{ fontSize: "2.4cqw", opacity: 0.35 }}>Sem conteúdo na tela</p>
+        ) : (
+          <div className="w-full" style={{ display: "grid", gap: `${theme.lineHeight * 0.25}cqw` }}>
+            {slide.lines.map((line, index) => (
+              <p
+                key={`${slide.id}-${index}`}
+                style={{
+                  fontSize: `${theme.fontSize}cqw`,
+                  lineHeight: theme.lineHeight,
+                  letterSpacing: `${theme.letterSpacing}em`,
+                  fontWeight: theme.bold ? 700 : 400,
+                  textTransform: theme.uppercase ? "uppercase" : "none",
+                  textShadow: theme.shadow ? "0 0.35cqw 1.2cqw rgba(0,0,0,0.6)" : "none",
+                  margin: 0,
+                }}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
 
-      {theme.showFooter && slide?.footer && !empty ? (
-        <p
-          className="absolute"
-          style={{
-            bottom: `${Math.max(theme.padding * 0.35, 1.5)}cqw`,
-            fontSize: `${Math.max(theme.fontSize * 0.3, 1.3)}cqw`,
-            color: theme.accentFg,
-            opacity: 0.8,
-            letterSpacing: "0.06em",
-          }}
-        >
-          {slide.footer}
-        </p>
-      ) : null}
+        {theme.showFooter && slide?.footer && !empty ? (
+          <p
+            className="mt-3"
+            style={{
+              fontSize: `${Math.max(theme.fontSize * 0.3, 1.3)}cqw`,
+              color: theme.accentFg,
+              opacity: 0.8,
+              letterSpacing: "0.06em",
+            }}
+          >
+            {slide.footer}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

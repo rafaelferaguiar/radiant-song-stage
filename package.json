@@ -1,7 +1,7 @@
 {
   "name": "rfpresenter",
   "productName": "RFPresenter",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "RFPresenter - Sistema de Projeção Desktop para Louvor e Bíblia",
   "main": "electron/main.cjs",
   "private": true,
