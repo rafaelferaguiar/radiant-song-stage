@@ -17,6 +17,14 @@ interface SlideCanvasProps {
 
 function LayerView({ layer, theme, media }: { layer: ProjectionLayer; theme: ThemeConfig; media: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && layer.kind === "video") {
+      video.playbackRate = layer.videoSpeed || 1;
+    }
+  }, [layer.videoSpeed, layer.kind]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,11 +62,11 @@ function LayerView({ layer, theme, media }: { layer: ProjectionLayer; theme: The
     };
   }, [layer, theme, media]);
 
-  const style = {
+  const style: React.CSSProperties = {
     opacity: layer.opacity / 100,
-    mixBlendMode: layer.blend === "normal" ? undefined : layer.blend,
+    mixBlendMode: layer.blend === "normal" ? undefined : (layer.blend as any),
     filter: layer.blur ? `blur(${layer.blur}px)` : undefined,
-  } as React.CSSProperties;
+  };
 
   if (layer.kind === "color") {
     return (
@@ -68,36 +76,252 @@ function LayerView({ layer, theme, media }: { layer: ProjectionLayer; theme: The
       />
     );
   }
+
   if (layer.kind === "loop") {
     return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" style={style} />;
   }
-  if (!layer.url) return null;
-  if (layer.kind === "video") {
+
+  if (layer.kind === "text") {
+    const positionClass =
+      layer.position === "top"
+        ? "justify-start pt-6"
+        : layer.position === "bottom"
+          ? "justify-end pb-6"
+          : "justify-center";
+
+    const alignClass =
+      layer.textAlign === "left"
+        ? "items-start text-left pl-6"
+        : layer.textAlign === "right"
+          ? "items-end text-right pr-6"
+          : "items-center text-center px-4";
+
     return (
-      <video
-        key={`${layer.id}-${media ? "live" : "still"}`}
-        src={media ? layer.url : `${layer.url}#t=0.1`}
-        autoPlay={media}
-        loop
-        muted
-        playsInline
-        preload={media ? "auto" : "metadata"}
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        style={{ ...style, objectFit: layer.fit ?? "cover" }}
+      <div
+        className={cn("pointer-events-none absolute inset-0 flex flex-col", positionClass, alignClass)}
+        style={style}
+      >
+        <div
+          className="rounded px-3 py-1"
+          style={{
+            backgroundColor: layer.textBgColor || "transparent",
+            color: layer.textColor || "#ffffff",
+            fontSize: `${layer.fontSize ?? 3}cqw`,
+            fontWeight: layer.fontBold !== false ? 700 : 400,
+            textShadow: "0 0.2cqw 0.8cqw rgba(0,0,0,0.8)",
+          }}
+        >
+          {layer.text || ""}
+        </div>
+      </div>
+    );
+  }
+
+  if (layer.kind === "camera") {
+    return <CameraLayerView layer={layer} style={style} />;
+  }
+
+  if (layer.kind === "browser") {
+    if (!layer.browserUrl) return null;
+    // Electron supports <webview> with full browser rendering (like OBS Browser Source)
+    // In a regular browser we use <iframe> as fallback
+    const isElectronEnv = typeof window !== "undefined" && "electronAPI" in window;
+    if (isElectronEnv) {
+      return (
+        <webview
+          key={`${layer.id}-${layer.browserUrl}`}
+          src={layer.browserUrl}
+          className={cn(
+            "absolute inset-0 h-full w-full",
+            layer.browserInteractive ? "pointer-events-auto" : "pointer-events-none",
+          )}
+          // @ts-ignore — webview is an Electron-specific element
+          style={style}
+          allowpopups="false"
+          disablewebsecurity="false"
+          webpreferences="contextIsolation=true, javascript=true"
+        />
+      );
+    }
+    return (
+      <iframe
+        key={`${layer.id}-${layer.browserUrl}`}
+        src={layer.browserUrl}
+        title={`browser-source-${layer.id}`}
+        className={cn(
+          "absolute inset-0 h-full w-full border-0",
+          layer.browserInteractive ? "pointer-events-auto" : "pointer-events-none",
+        )}
+        style={style}
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        allow="camera; microphone; autoplay; fullscreen"
       />
     );
   }
+
+  if (!layer.url) return null;
+
+
+  if (layer.kind === "video") {
+    return (
+      <video
+        ref={videoRef}
+        key={`${layer.id}-${media ? "live" : "still"}`}
+        src={media ? layer.url : `${layer.url}#t=0.1`}
+        autoPlay={media}
+        loop={layer.videoLoop !== false}
+        muted={layer.videoMuted !== false}
+        playsInline
+        preload={media ? "auto" : "metadata"}
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        style={{ ...style, objectFit: (layer.fit as any) ?? "cover" }}
+      />
+    );
+  }
+
   return (
     <div
       className="pointer-events-none absolute inset-0"
       style={{
         ...style,
         backgroundImage: `url(${layer.url})`,
-        backgroundSize: layer.fit ?? "cover",
+        backgroundSize: layer.fit === "fill" ? "100% 100%" : (layer.fit ?? "cover"),
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     />
+  );
+}
+
+// Camera layer — getUserMedia (like OBS Virtual Camera / Webcam source)
+function CameraLayerView({
+  layer,
+  style,
+}: {
+  layer: ProjectionLayer;
+  style: React.CSSProperties;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    const constraints: MediaStreamConstraints = {
+      video: layer.cameraDeviceId
+        ? { deviceId: { exact: layer.cameraDeviceId } }
+        : true,
+      audio: false,
+    };
+    navigator.mediaDevices
+      ?.getUserMedia(constraints)
+      .then((s) => {
+        stream = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+        }
+      })
+      .catch((err) => console.warn("Camera layer: getUserMedia error", err));
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, [layer.cameraDeviceId]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      style={{
+        ...style,
+        objectFit: "cover",
+        transform: layer.cameraMirrored ? "scaleX(-1)" : undefined,
+      }}
+    />
+  );
+}
+
+function LyricsLayerView({
+  slide,
+  theme,
+  empty,
+  layer,
+}: {
+  slide: ProjectionSlide | null;
+  theme: ThemeConfig;
+  empty: boolean;
+  layer?: ProjectionLayer;
+}) {
+  const opacity = layer ? layer.opacity / 100 : 1;
+  const blendMode = layer && layer.blend !== "normal" ? (layer.blend as any) : undefined;
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-0 flex flex-col",
+        theme.vAlign === "center" ? "justify-center" : "justify-end",
+        theme.align === "center" ? "items-center text-center" : "items-start text-left",
+      )}
+      style={{
+        padding: `${theme.padding}cqw`,
+        opacity,
+        mixBlendMode: blendMode,
+      }}
+    >
+      {theme.showTitle && slide?.title ? (
+        <p
+          style={{
+            fontSize: `${Math.max(theme.fontSize * 0.4, 1.6)}cqw`,
+            color: theme.accentFg,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            marginBottom: "1.6cqw",
+            opacity: 0.9,
+          }}
+        >
+          {slide.title}
+        </p>
+      ) : null}
+
+      {empty || !slide ? (
+        <p style={{ fontSize: "2.4cqw", opacity: 0.35 }}>Sem conteúdo na tela</p>
+      ) : (
+        <div className="w-full" style={{ display: "grid", gap: `${theme.lineHeight * 0.25}cqw` }}>
+          {slide.lines.map((line, index) => (
+            <p
+              key={`${slide.id}-${index}`}
+              style={{
+                fontSize: `${theme.fontSize}cqw`,
+                lineHeight: theme.lineHeight,
+                letterSpacing: `${theme.letterSpacing}em`,
+                fontWeight: theme.bold ? 700 : 400,
+                textTransform: theme.uppercase ? "uppercase" : "none",
+                textShadow: theme.shadow ? "0 0.35cqw 1.2cqw rgba(0,0,0,0.6)" : "none",
+                margin: 0,
+              }}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {theme.showFooter && slide?.footer && !empty ? (
+        <p
+          className="absolute"
+          style={{
+            bottom: `${Math.max(theme.padding * 0.35, 1.5)}cqw`,
+            fontSize: `${Math.max(theme.fontSize * 0.3, 1.3)}cqw`,
+            color: theme.accentFg,
+            opacity: 0.8,
+            letterSpacing: "0.06em",
+          }}
+        >
+          {slide.footer}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -117,6 +341,7 @@ export function SlideCanvas({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const layers = theme.layers ?? [];
+  const hasLyricsLayer = layers.some((l) => l.kind === "lyrics");
 
   useEffect(() => {
     const video = videoRef.current;
@@ -210,11 +435,24 @@ export function SlideCanvas({
         style={{ backgroundColor: "#000", opacity: overlayOpacity }}
       />
 
-      {/* camadas empilhadas (fundo → topo), sempre abaixo do texto */}
+      {/* Camadas empilhadas respeitando a timeline (fundo → topo) */}
       {!blackout
-        ? layers
-            .filter((layer) => layer.visible)
-            .map((layer) => <LayerView key={layer.id} layer={layer} theme={theme} media={media} />)
+        ? layers.map((layer) => {
+            if (!layer.visible) return null;
+            if (layer.kind === "lyrics") {
+              if (isMediaSlide || showLogo) return null;
+              return (
+                <LyricsLayerView
+                  key={layer.id}
+                  slide={slide}
+                  theme={theme}
+                  empty={empty}
+                  layer={layer}
+                />
+              );
+            }
+            return <LayerView key={layer.id} layer={layer} theme={theme} media={media} />;
+          })
         : null}
 
       {/* mídia projetada em tela cheia */}
@@ -244,6 +482,11 @@ export function SlideCanvas({
         )
       ) : null}
 
+      {/* Fallback de letra se não houver camada de lyrics explícita */}
+      {!blackout && !hasLyricsLayer && !isMediaSlide && !showLogo ? (
+        <LyricsLayerView slide={slide} theme={theme} empty={empty} />
+      ) : null}
+
       {blackout ? null : showLogo ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <span
@@ -258,69 +501,7 @@ export function SlideCanvas({
             {logoText || "Bem-vindos"}
           </span>
         </div>
-      ) : isMediaSlide ? null : (
-        <div
-          className={cn(
-            "absolute inset-0 flex flex-col",
-            theme.vAlign === "center" ? "justify-center" : "justify-end",
-            theme.align === "center" ? "items-center text-center" : "items-start text-left",
-          )}
-          style={{ padding: `${theme.padding}cqw` }}
-        >
-          {theme.showTitle && slide?.title ? (
-            <p
-              style={{
-                fontSize: `${Math.max(theme.fontSize * 0.4, 1.6)}cqw`,
-                color: theme.accentFg,
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                marginBottom: "1.6cqw",
-                opacity: 0.9,
-              }}
-            >
-              {slide.title}
-            </p>
-          ) : null}
-
-          {empty ? (
-            <p style={{ fontSize: "2.4cqw", opacity: 0.35 }}>Sem conteúdo na tela</p>
-          ) : (
-            <div className="w-full" style={{ display: "grid", gap: `${theme.lineHeight * 0.25}cqw` }}>
-              {slide.lines.map((line, index) => (
-                <p
-                  key={`${slide.id}-${index}`}
-                  style={{
-                    fontSize: `${theme.fontSize}cqw`,
-                    lineHeight: theme.lineHeight,
-                    letterSpacing: `${theme.letterSpacing}em`,
-                    fontWeight: theme.bold ? 700 : 400,
-                    textTransform: theme.uppercase ? "uppercase" : "none",
-                    textShadow: theme.shadow ? "0 0.35cqw 1.2cqw rgba(0,0,0,0.6)" : "none",
-                    margin: 0,
-                  }}
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-          )}
-
-          {theme.showFooter && slide?.footer && !empty ? (
-            <p
-              className="absolute"
-              style={{
-                bottom: `${Math.max(theme.padding * 0.35, 1.5)}cqw`,
-                fontSize: `${Math.max(theme.fontSize * 0.3, 1.3)}cqw`,
-                color: theme.accentFg,
-                opacity: 0.8,
-                letterSpacing: "0.06em",
-              }}
-            >
-              {slide.footer}
-            </p>
-          ) : null}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

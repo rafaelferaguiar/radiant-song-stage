@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowUp, BookOpen, Music4, Plus, Trash2, Type } from "lucide-react";
+
+import { ArrowDown, ArrowUp, BookOpen, Image as ImageIcon, Music4, Plus, Trash2, Type } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,22 +14,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { SetlistItemRecord } from "@/lib/library.functions";
 import {
-  addSetlistItem,
-  createSetlist,
-  deleteSetlist,
-  listSetlistItems,
-  listSetlists,
-  listSongs,
-  removeSetlistItem,
-  reorderSetlistItems,
-  updateSetlistItem,
-  type SetlistItemRecord,
-} from "@/lib/library.functions";
+  localListSetlists,
+  localListSetlistItems,
+  localListSongs,
+  localCreateSetlist,
+  localDeleteSetlist,
+  localRemoveSetlistItem,
+  localReorderSetlistItems,
+  localAddSetlistItem,
+  localUpdateSetlistItem,
+} from "@/lib/local-db";
 import { getChapter } from "@/lib/bible.functions";
 import { buildBibleSlides, buildSongSlides } from "@/lib/slides";
 import { formatRef, TRANSLATIONS } from "@/lib/bible-books";
 import type { DeckMeta, ProjectionSlide } from "@/lib/projection";
+import type { MediaItem } from "@/lib/media";
 
 interface SetlistPanelProps {
   linesPerSlide: number;
@@ -43,6 +44,7 @@ const KIND_ICON = {
   song: Music4,
   bible: BookOpen,
   text: Type,
+  media: ImageIcon,
 } as const;
 
 export function SetlistPanel({
@@ -54,19 +56,9 @@ export function SetlistPanel({
 }: SetlistPanelProps) {
   const [newName, setNewName] = useState("");
   const queryClient = useQueryClient();
-  const fetchSetlists = useServerFn(listSetlists);
-  const fetchItems = useServerFn(listSetlistItems);
-  const fetchSongs = useServerFn(listSongs);
-  const fetchChapter = useServerFn(getChapter);
-  const create = useServerFn(createSetlist);
-  const removeList = useServerFn(deleteSetlist);
-  const removeItem = useServerFn(removeSetlistItem);
-  const reorder = useServerFn(reorderSetlistItems);
-  const addItem = useServerFn(addSetlistItem);
-  const editItem = useServerFn(updateSetlistItem);
-
-  const { data: setlists = [] } = useQuery({ queryKey: ["setlists"], queryFn: () => fetchSetlists() });
-  const { data: songs = [] } = useQuery({ queryKey: ["songs"], queryFn: () => fetchSongs() });
+  const fetchChapter = getChapter;
+  const { data: setlists = [] } = useQuery({ queryKey: ["setlists"], queryFn: () => localListSetlists() });
+  const { data: songs = [] } = useQuery({ queryKey: ["songs"], queryFn: () => localListSongs() });
 
   useEffect(() => {
     if (!activeSetlistId && setlists.length) onActiveSetlistChange(setlists[0]!.id);
@@ -74,7 +66,7 @@ export function SetlistPanel({
 
   const { data: items = [] } = useQuery({
     queryKey: ["setlist-items", activeSetlistId],
-    queryFn: () => fetchItems({ data: { setlistId: activeSetlistId! } }),
+    queryFn: () => localListSetlistItems(activeSetlistId!),
     enabled: Boolean(activeSetlistId),
   });
 
@@ -84,7 +76,7 @@ export function SetlistPanel({
   };
 
   const createMutation = useMutation({
-    mutationFn: () => create({ data: { name: newName || "Culto" } }),
+    mutationFn: () => localCreateSetlist({ name: newName || "Culto" }),
     onSuccess: (row) => {
       setNewName("");
       queryClient.invalidateQueries({ queryKey: ["setlists"] });
@@ -126,12 +118,60 @@ export function SetlistPanel({
       );
       return;
     }
+    if (item.kind === "media") {
+      const mediaUrl = String(item.payload["mediaUrl"] ?? "");
+      const mediaKind = (item.payload["mediaKind"] as "image" | "video") || "image";
+      const mediaFit = (item.payload["mediaFit"] as "cover" | "contain") || "contain";
+      const slide: ProjectionSlide = {
+        id: `setlist-media-${item.id}`,
+        kind: "media",
+        label: item.title,
+        title: item.title,
+        lines: [],
+        footer: item.title,
+        mediaUrl,
+        mediaKind,
+        mediaFit,
+      };
+      onOpenDeck({ title: item.title, durationMin }, [slide]);
+      return;
+    }
     const lines = String(item.payload["body"] ?? item.title)
       .split("\n")
       .filter(Boolean);
     onOpenDeck({ title: item.title, durationMin }, [
       { id: item.id, kind: "text", title: item.title, lines, footer: item.title },
     ]);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!activeSetlistId) {
+      toast.error("Selecione ou crie um repertório primeiro");
+      return;
+    }
+    const raw = e.dataTransfer.getData("application/x-rfpresenter-media");
+    if (raw) {
+      try {
+        const media = JSON.parse(raw) as MediaItem;
+        await localAddSetlistItem({
+          setlistId: activeSetlistId,
+          kind: "media",
+          title: media.name,
+          payload: {
+            mediaUrl: media.url,
+            mediaKind: media.kind,
+            mediaFit: "contain",
+            durationMin: 5,
+          },
+          position: items.length,
+        });
+        invalidate();
+        toast.success(`"${media.name}" adicionado ao repertório`);
+      } catch (err) {
+        console.error(err);
+      }
+    }
   };
 
   const move = async (index: number, direction: -1 | 1) => {
@@ -142,7 +182,7 @@ export function SetlistPanel({
     const b = next[target]!;
     next[index] = b;
     next[target] = a;
-    await reorder({ data: { items: next.map((item, i) => ({ id: item.id, position: i })) } });
+    await localReorderSetlistItems(next.map((item, i) => ({ id: item.id, position: i })));
     invalidate();
   };
 
@@ -169,7 +209,7 @@ export function SetlistPanel({
             className="text-destructive"
             title="Excluir repertório"
             onClick={async () => {
-              await removeList({ data: { id: activeSetlistId } });
+              await localDeleteSetlist(activeSetlistId);
               onActiveSetlistChange(null);
               invalidate();
             }}
@@ -193,10 +233,17 @@ export function SetlistPanel({
         </Button>
       </div>
 
-      <ScrollArea className="-mr-2 min-h-0 flex-1 pr-2">
+      <ScrollArea
+        className="-mr-2 min-h-0 flex-1 pr-2"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(e) => void handleDrop(e)}
+      >
         {items.length === 0 ? (
-          <p className="py-6 text-sm text-muted-foreground">
-            Adicione músicas e passagens a partir das abas Músicas e Bíblia.
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            Adicione músicas, passagens ou <strong>arraste fotos e vídeos</strong> aqui.
           </p>
         ) : (
           <ol className="space-y-1.5">
@@ -223,12 +270,10 @@ export function SetlistPanel({
                       value={Number(item.payload["durationMin"]) || ""}
                       onChange={async (e) => {
                         const v = e.target.value;
-                        await editItem({
-                          data: {
+                        await localUpdateSetlistItem({
                             id: item.id,
                             payload: { ...item.payload, durationMin: v ? Number(v) : null },
-                          },
-                        });
+                          });
                         invalidate();
                       }}
                       className="h-7 w-16 rounded border border-border bg-background px-1.5 text-xs"
@@ -246,7 +291,7 @@ export function SetlistPanel({
                       size="icon"
                       className="size-6 text-destructive"
                       onClick={async () => {
-                        await removeItem({ data: { id: item.id } });
+                        await localRemoveSetlistItem(item.id);
                         invalidate();
                       }}
                     >
@@ -266,14 +311,12 @@ export function SetlistPanel({
         disabled={!activeSetlistId}
         onClick={async () => {
           if (!activeSetlistId) return;
-          await addItem({
-            data: {
-              setlistId: activeSetlistId,
-              kind: "text",
-              title: "Aviso",
-              payload: { body: "Escreva o aviso aqui" },
-              position: items.length,
-            },
+          await localAddSetlistItem({
+            setlistId: activeSetlistId,
+            kind: "text",
+            title: "Aviso",
+            payload: { body: "Escreva o aviso aqui" },
+            position: items.length,
           });
           invalidate();
         }}

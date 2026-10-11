@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RFPresenter</title>
+  <style>
+    @import url(https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700);
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:100%;height:100%;background:#0a0a0f;font-family:Inter,system-ui,sans-serif;color:#e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none;-webkit-app-region:drag}
+    .bg-glow{position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(99,102,241,.18) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 80% 80%,rgba(168,85,247,.12) 0%,transparent 60%);pointer-events:none}
+    .card{position:relative;display:flex;flex-direction:column;align-items:center;gap:24px;padding:48px 56px 44px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;backdrop-filter:blur(24px);box-shadow:0 32px 80px rgba(0,0,0,.6);width:360px}
+    .logo-img {
+      width: 90px;
+      height: auto;
+      filter: drop-shadow(0 0 20px rgba(234,179,8,0.45));
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 16px rgba(234,179,8,0.4)); transform: scale(1); }
+      50%       { filter: drop-shadow(0 0 28px rgba(234,179,8,0.8)); transform: scale(1.03); }
+    }
+    h1{font-size:22px;font-weight:700;letter-spacing:-.3px;background:linear-gradient(135deg,#fef08a,#eab308);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    #status{font-size:13px;color:rgba(226,232,240,.55);min-height:18px;text-align:center;transition:opacity .3s}
+    .progress-track{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#eab308,#f59e0b,#fbbf24);background-size:200% 100%;width:0%;transition:width .5s cubic-bezier(.4,0,.2,1);animation:shimmer 1.8s linear infinite}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .steps{display:flex;gap:8px}
+    .step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.12);transition:background .4s,transform .4s}
+    .step-dot.active{background:#eab308;transform:scale(1.25)}
+    .step-dot.done{background:#10b981}
+    .version{font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.5px}
+    #error-box{display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 16px;font-size:12px;color:#fca5a5;width:100%;word-break:break-all;text-align:left}
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="card">
+    <img src="logo.png" alt="RFPresenter" class="logo-img" />
+    <h1>RFPresenter</h1>
+    <div class="steps" id="steps">
+      <div class="step-dot" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-dot" id="dot-3"></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+    <p id="status">Iniciando aplicativo...</p>
+    <div id="error-box"></div>
+    <span class="version">v1.0.0</span>
+  </div>
+  <script>
+    var steps=[{label:"Iniciando aplicativo...",pct:10},{label:"Localizando servidor local...",pct:35},{label:"Aguardando servidor HTTP...",pct:65},{label:"Carregando interface...",pct:88}];
+    function setStep(idx){var statusEl=document.getElementById("status"),progressEl=document.getElementById("progress");if(steps[idx]){statusEl.textContent=steps[idx].label;progressEl.style.width=steps[idx].pct+"%"}for(var i=0;i<4;i++){var dot=document.getElementById("dot-"+i);dot.className="step-dot"+(i<idx?" done":i===idx?" active":"")}}
+    function showError(msg){var box=document.getElementById("error-box");box.style.display="block";box.textContent="⚠ "+msg;document.getElementById("status").textContent="Falha ao inicializar.";document.getElementById("progress").style.width="100%";document.getElementById("progress").style.background="#ef4444";document.getElementById("progress").style.animation="none"}
+    var ipc=window.__electronBridge__;
+    if(ipc&&ipc.onSplashProgress){ipc.onSplashProgress(function(data){if(data.error){showError(data.error)}else{setStep(data.step)}})}
+    setStep(0);
+  </script>
+</body>
+</html>

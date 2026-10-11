@@ -1,0 +1,46 @@
+{
+  "appId": "com.rfpresenter.app",
+  "productName": "RFPresenter",
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "buildDependenciesFromSource": false,
+  "publish": {
+    "provider": "github",
+    "owner": "rafaelferaguiar",
+    "repo": "radiant-song-stage"
+  },
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    ".output/**/*",
+    "electron/**/*",
+    "public/**/*",
+    "package.json"
+  ],
+  "asarUnpack": [
+    ".output/**/*",
+    "electron/splash.html",
+    "electron/logo.png",
+    "electron/preload-splash.cjs",
+    "electron/preload.cjs",
+    "electron/preload.js"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "public/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "RFPresenter",
+    "deleteAppDataOnUninstall": false
+  }
+}

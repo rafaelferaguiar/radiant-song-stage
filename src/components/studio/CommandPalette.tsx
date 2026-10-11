@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { Mic2, BookOpen, ListMusic, Command as CommandIcon, Layers, Monitor, Tv, EyeOff, Flame, Timer, Search } from "lucide-react";
 
 import {
@@ -12,7 +11,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { searchSongs, type SetlistRecord, type SongRecord } from "@/lib/library.functions";
+import type { SetlistRecord, SongRecord } from "@/lib/library.functions";
+import { localSearchSongs } from "@/lib/local-db";
 import { parseReference, formatRef, type ParsedRef } from "@/lib/bible-books";
 
 export type QuickAction =
@@ -54,11 +54,9 @@ export function CommandPalette({
   onAction,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
-  const search = useServerFn(searchSongs);
-
   const { data: searchedSongs = [], isFetching } = useQuery({
     queryKey: ["song-search", query],
-    queryFn: () => search({ data: { q: query } }),
+    queryFn: () => localSearchSongs(query),
     enabled: query.trim().length > 1 && !parseReference(query),
     staleTime: 1000 * 30,
   });

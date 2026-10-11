@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+
 import { ArrowLeft, Dices, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { saveTheme, type JsonObject } from "@/lib/library.functions";
+import { localSaveTheme } from "@/lib/local-db";
+import type { JsonObject } from "@/lib/library.functions";
 import {
   DEFAULT_THEME,
   LOOP_KIND_OPTIONS,
@@ -62,7 +63,7 @@ const PALETTES: string[][] = [
 
 function LoopStudio() {
   const queryClient = useQueryClient();
-  const persist = useServerFn(saveTheme);
+  const persist = localSaveTheme;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [name, setName] = useState("Meu loop");
@@ -109,9 +110,7 @@ function LoopStudio() {
 
   const save = useMutation({
     mutationFn: () =>
-      persist({
-        data: { id: null, name: name.trim() || "Loop sem nome", config: theme as unknown as JsonObject },
-      }),
+      persist({ id: null, name: name.trim() || "Loop sem nome", config: theme as unknown as Record<string, unknown> }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });
       toast.success("Loop salvo como tema — já aparece na galeria do estúdio");

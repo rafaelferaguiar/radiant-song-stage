@@ -1,5 +1,9 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "rfpresenter",
+  "productName": "RFPresenter",
+  "version": "1.0.1",
+  "description": "RFPresenter - Sistema de Projeção Desktop para Louvor e Bíblia",
+  "main": "electron/main.cjs",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -9,7 +13,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "electron:start": "electron electron/main.cjs",
+    "electron:dev": "concurrently -k \"vite dev\" \"wait-on tcp:5173 && electron electron/main.cjs\"",
+    "electron:build": "vite build && electron-builder"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -53,6 +60,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "electron-updater": "^6.8.9",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
@@ -77,6 +85,9 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.5",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -87,6 +98,7 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "wait-on": "^9.1.0"
   }
 }

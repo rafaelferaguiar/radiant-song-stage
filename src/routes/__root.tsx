@@ -36,7 +36,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  console.error("Erro capturado no Root Error Boundary:", error);
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
@@ -44,26 +44,35 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
+      <div className="max-w-lg text-center p-6 rounded-xl border border-border/40 bg-card/60 shadow-2xl backdrop-blur-md">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">Esta página não carregou</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Algo deu errado do nosso lado. Tente novamente ou volte ao início.
+          {error?.message || "Algo deu errado ao renderizar o aplicativo."}
         </p>
+        {error?.stack && (
+          <pre className="mt-4 max-h-36 overflow-auto rounded bg-black/50 p-2 text-left font-mono text-xs text-red-300">
+            {error.stack}
+          </pre>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
-              router.invalidate();
-              reset();
+              if (typeof window !== "undefined") {
+                window.location.href = "/estudio";
+              } else {
+                router.invalidate();
+                reset();
+              }
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Tentar novamente
           </button>
           <a
-            href="/"
+            href="/estudio"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Início
+            Ir para o Estúdio
           </a>
         </div>
       </div>

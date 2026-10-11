@@ -1,7 +1,7 @@
 import type { JsonObject } from "@/lib/library.functions";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+
 import { BookOpen, Columns2, ListPlus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,9 +44,9 @@ export function BiblePanel({ versesPerSlide, onOpenDeck, onSendSlide, onAddToSet
   const [compareTargets, setCompareTargets] = useState(["ARA", "NVIPT", "NTLH"]);
   const [compareVerseNumber, setCompareVerseNumber] = useState(16);
 
-  const fetchChapter = useServerFn(getChapter);
-  const runSearch = useServerFn(searchVerses);
-  const runCompare = useServerFn(compareVerse);
+  const fetchChapter = getChapter;
+  const runSearch = searchVerses;
+  const runCompare = compareVerse;
 
   const book = BIBLE_BOOKS.find((b) => b.id === bookId) ?? BIBLE_BOOKS[42]!;
   const translationLabel = TRANSLATIONS.find((t) => t.code === translation)?.short ?? translation;

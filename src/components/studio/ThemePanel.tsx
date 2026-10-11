@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { Pencil, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -18,7 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteTheme, listThemes, saveTheme, type JsonObject } from "@/lib/library.functions";
+import type { JsonObject } from "@/lib/library.functions";
+import { localListThemes, localSaveTheme, localDeleteTheme } from "@/lib/local-db";
+import { uploadMediaFile } from "@/lib/media";
 import {
   DEFAULT_THEME,
   FONT_OPTIONS,
@@ -30,7 +31,6 @@ import {
   type ThemeConfig,
 } from "@/lib/projection";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { useRef, useState } from "react";
 
 const SAMPLE_SLIDE: ProjectionSlide = {
@@ -87,15 +87,11 @@ export function ThemePanel({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const fetchThemes = useServerFn(listThemes);
-  const persist = useServerFn(saveTheme);
-  const remove = useServerFn(deleteTheme);
-
-  const { data: themes = [] } = useQuery({ queryKey: ["themes"], queryFn: () => fetchThemes() });
+  const { data: themes = [] } = useQuery({ queryKey: ["themes"], queryFn: () => localListThemes() });
 
   const save = useMutation({
     mutationFn: () =>
-      persist({ data: { id: editingId, name, config: theme as unknown as JsonObject } }),
+      localSaveTheme({ id: editingId, name, config: theme as unknown as JsonObject }),
     onSuccess: (row) => {
       queryClient.invalidateQueries({ queryKey: ["themes"] });
       setSelectedId(row.id);
@@ -113,19 +109,9 @@ export function ThemePanel({
   const uploadBackground = async (file: File) => {
     setUploading(true);
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const userId = auth.user?.id;
-      if (!userId) throw new Error("Faça login novamente para enviar arquivos");
-      const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
-      const { error } = await supabase.storage.from("backgrounds").upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-      if (error) throw error;
-      const signed = await supabase.storage.from("backgrounds").createSignedUrl(path, 60 * 60 * 24 * 365);
-      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("Falha ao gerar link");
-      set({ bgUrl: signed.data.signedUrl, bgKind: file.type.startsWith("video") ? "video" : "image" });
-      toast.success("Fundo enviado");
+      const item = await uploadMediaFile(file);
+      set({ bgUrl: item.url, bgKind: item.kind });
+      toast.success(`${item.kind === "video" ? "Vídeo" : "Imagem"} de fundo salvo localmente`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha no envio");
     } finally {

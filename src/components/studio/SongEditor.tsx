@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { Music4, Palette, RotateCcw, Type } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlideCanvas } from "@/components/SlideCanvas";
-import { listThemes, saveSong, type SongRecord } from "@/lib/library.functions";
+import type { SongRecord } from "@/lib/library.functions";
+import { localSaveSong, localListThemes } from "@/lib/local-db";
 import { buildSongSlides, parseSections, sectionKey, type SectionConfigMap } from "@/lib/slides";
 import { DEFAULT_THEME, FONT_OPTIONS, type ThemeConfig } from "@/lib/projection";
 import { cn } from "@/lib/utils";
@@ -53,12 +53,9 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
   const [sections, setSections] = useState<SectionConfigMap>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const save = useServerFn(saveSong);
-  const fetchThemes = useServerFn(listThemes);
-
   const { data: themes = [] } = useQuery({
     queryKey: ["themes"],
-    queryFn: () => fetchThemes(),
+    queryFn: () => localListThemes(),
     enabled: open,
   });
 
@@ -142,26 +139,24 @@ export function SongEditor({ open, song, baseTheme, onOpenChange }: SongEditorPr
 
   const mutation = useMutation({
     mutationFn: () =>
-      save({
-        data: {
-          id: song?.id ?? null,
-          title: form.title,
-          artist: form.artist,
-          song_key: form.song_key,
-          bpm: form.bpm ? Number(form.bpm) : null,
-          ccli: form.ccli,
-          tags: form.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
-          lyrics: form.lyrics,
-          arrangement: form.arrangement
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
-          notes: form.notes,
-          sections,
-        },
+      localSaveSong({
+        id: song?.id ?? null,
+        title: form.title,
+        artist: form.artist,
+        song_key: form.song_key,
+        bpm: form.bpm ? Number(form.bpm) : null,
+        ccli: form.ccli,
+        tags: form.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        lyrics: form.lyrics,
+        arrangement: form.arrangement
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        notes: form.notes,
+        sections,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });

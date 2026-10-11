@@ -172,7 +172,7 @@ export const addSetlistItem = createServerFn({ method: "POST" })
     position?: number;
   }) => ({
     setlistId: String(input.setlistId),
-    kind: ["song", "bible", "text"].includes(input.kind) ? input.kind : "text",
+    kind: ["song", "bible", "text", "media"].includes(input.kind) ? input.kind : "text",
     title: String(input.title).slice(0, 200),
     payload: input.payload ?? {},
     position: Number.isFinite(input.position) ? Math.trunc(input.position as number) : 0,

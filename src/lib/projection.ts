@@ -52,25 +52,85 @@ export const LOOP_KIND_OPTIONS: { value: LoopKind; label: string }[] = [
   { value: "rays", label: "Raios de luz" },
   { value: "grid", label: "Grade" },
 ];
-export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
+export type BlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "color-dodge"
+  | "color-burn"
+  | "hard-light"
+  | "soft-light"
+  | "difference"
+  | "exclusion";
 
-export type LayerKind = "color" | "image" | "video" | "loop";
+export const BLEND_MODE_OPTIONS: { value: BlendMode; label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "multiply", label: "Multiplicação" },
+  { value: "screen", label: "Divisão / Screen" },
+  { value: "overlay", label: "Sobreposição / Overlay" },
+  { value: "soft-light", label: "Luz Suave" },
+  { value: "hard-light", label: "Luz Direta" },
+  { value: "darken", label: "Escurecer" },
+  { value: "lighten", label: "Clarear" },
+  { value: "color-dodge", label: "Subexposição de Cores" },
+  { value: "color-burn", label: "Superexposição de Cores" },
+  { value: "difference", label: "Diferença" },
+  { value: "exclusion", label: "Exclusão" },
+];
+
+export type LayerKind = "lyrics" | "color" | "image" | "video" | "loop" | "text" | "camera" | "browser";
 
 export interface ProjectionLayer {
   id: string;
   name: string;
   kind: LayerKind;
   visible: boolean;
+  locked?: boolean;
   opacity: number; // 0-100
   blend: BlendMode;
   url?: string;
   color?: string;
-  fit?: "cover" | "contain";
+  fit?: "cover" | "contain" | "fill";
   blur?: number;
+  // Loop properties
   loopKind?: LoopKind;
   loopColors?: string[];
   loopSpeed?: number;
+  // Video properties
+  videoLoop?: boolean;
+  videoMuted?: boolean;
+  videoSpeed?: number;
+  // Text layer properties (watermarks, live subtitle, announcements, logo overlays)
+  text?: string;
+  textColor?: string;
+  textBgColor?: string;
+  fontSize?: number; // cqw percentage
+  fontBold?: boolean;
+  textAlign?: "left" | "center" | "right";
+  position?: "top" | "center" | "bottom";
+  textPadding?: number;
+  // Camera layer
+  cameraDeviceId?: string; // "" = default
+  cameraMirrored?: boolean;
+  // Browser source layer (like OBS Browser Source)
+  browserUrl?: string;
+  browserWidth?: number;
+  browserHeight?: number;
+  browserInteractive?: boolean;
 }
+
+export const DEFAULT_LYRICS_LAYER: ProjectionLayer = {
+  id: "layer-lyrics-main",
+  name: "Letra da Música / Conteúdo",
+  kind: "lyrics",
+  visible: true,
+  locked: false,
+  opacity: 100,
+  blend: "normal",
+};
 
 export function createLayer(patch: Partial<ProjectionLayer> = {}): ProjectionLayer {
   return {
@@ -78,6 +138,7 @@ export function createLayer(patch: Partial<ProjectionLayer> = {}): ProjectionLay
     name: "Camada",
     kind: "color",
     visible: true,
+    locked: false,
     opacity: 100,
     blend: "normal",
     color: "#1e40af",
@@ -86,8 +147,57 @@ export function createLayer(patch: Partial<ProjectionLayer> = {}): ProjectionLay
     loopKind: "gradient",
     loopColors: ["#1e3a8a", "#7c2d12"],
     loopSpeed: 1,
+    videoLoop: true,
+    videoMuted: true,
+    videoSpeed: 1,
+    text: "",
+    textColor: "#ffffff",
+    fontSize: 3,
+    fontBold: true,
+    textAlign: "center",
+    position: "bottom",
     ...patch,
   };
+}
+
+export function syncLyricsLayerTitle(layers: ProjectionLayer[] | undefined, title: string): ProjectionLayer[] {
+  const currentLayers = layers && layers.length ? [...layers] : [{ ...DEFAULT_LYRICS_LAYER }];
+  const formattedTitle = title ? (title.startsWith("Música:") || title.startsWith("Bíblia:") || title.startsWith("Aviso:") || title.startsWith("Mídia:") ? title : `Música: ${title}`) : "Letra da Música / Conteúdo";
+  const lyricsIndex = currentLayers.findIndex((l) => l.kind === "lyrics");
+  if (lyricsIndex >= 0) {
+    const target = currentLayers[lyricsIndex];
+    if (target) {
+      currentLayers[lyricsIndex] = { ...target, name: formattedTitle };
+    }
+    return currentLayers;
+  }
+  // Se não existir, insere no topo
+  return [...currentLayers, { ...DEFAULT_LYRICS_LAYER, name: formattedTitle }];
+}
+
+export function createLayerFromMedia(media: { name: string; url: string; kind: "image" | "video" }): ProjectionLayer {
+  return createLayer({
+    name: media.name || (media.kind === "video" ? "Vídeo" : "Imagem"),
+    kind: media.kind,
+    url: media.url,
+    opacity: 100,
+    blend: "normal",
+    fit: "cover",
+    videoLoop: true,
+    videoMuted: true,
+  });
+}
+
+export function createLayerFromLoop(loop: { name?: string; kind: LoopKind; colors: string[]; speed?: number }): ProjectionLayer {
+  return createLayer({
+    name: loop.name || `Loop ${loop.kind}`,
+    kind: "loop",
+    loopKind: loop.kind,
+    loopColors: loop.colors,
+    loopSpeed: loop.speed ?? 1,
+    opacity: 100,
+    blend: "normal",
+  });
 }
 
 export interface ThemeConfig {
@@ -125,6 +235,7 @@ export interface ThemeConfig {
 }
 
 export const DEFAULT_THEME: ThemeConfig = {
+  layers: [DEFAULT_LYRICS_LAYER],
   bgKind: "none",
   bgUrl: "",
   bgFit: "cover",
@@ -237,6 +348,25 @@ export interface StageState {
   showClock: boolean;
   /** timer de duração do culto */
   showService: boolean;
+  /** texto grande tipo letra de música exibido no palco */
+  bigText: string;
+  showBigText: boolean;
+}
+
+/** Widget posicionável no layout do palco (editor visual) */
+export interface StageWidget {
+  id: string;
+  kind: "clock" | "service" | "timer" | "message" | "slide" | "nextSection" | "bigText" | "notes";
+  label?: string;
+  /** posição em % da tela (0-100) */
+  x: number;
+  y: number;
+  /** tamanho em % da tela (0-100) */
+  w: number;
+  h: number;
+  /** multiplicador de tamanho do texto (1 = padrão) */
+  scale?: number;
+  timerId?: string; // para kind === "timer", qual timer exibir
 }
 
 /** timer nomeado, criado livremente pelo operador (ex: "Pregação") */
@@ -280,6 +410,8 @@ export interface LiveState {
   bpm: number | null;
   notes: string;
   updatedAt: number;
+  /** layout customizado do palco (editor visual) — undefined = layout padrão */
+  stageLayout?: StageWidget[];
 }
 
 export const LIVE_STORAGE_KEY = "spresenter:live-state";
@@ -302,6 +434,8 @@ export const INITIAL_LIVE_STATE: LiveState = {
     showTimers: true,
     showClock: true,
     showService: true,
+    bigText: "",
+    showBigText: false,
   },
   timers: {
     serviceStartedAt: null,

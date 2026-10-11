@@ -28,17 +28,14 @@ export const Route = createFileRoute("/projecao")({
 
 function ProjectionScreen() {
   const [state, setState] = useState<LiveState>(INITIAL_LIVE_STATE);
-  const [hint, setHint] = useState(true);
 
   useEffect(() => {
     setState(readLiveState());
     const unsubscribe = subscribeLiveState((next) =>
       setState((prev) => (prev.freeze && next.freeze ? { ...next, slide: prev.slide } : next)),
     );
-    const timer = window.setTimeout(() => setHint(false), 4000);
     return () => {
       unsubscribe();
-      window.clearTimeout(timer);
     };
   }, []);
 
@@ -62,11 +59,6 @@ function ProjectionScreen() {
         showLogo={state.showLogo}
         logoText={state.logoText}
       />
-      {hint ? (
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs text-white/70">
-          Pressione F para tela cheia · arraste esta janela para o projetor
-        </p>
-      ) : null}
     </div>
   );
 }

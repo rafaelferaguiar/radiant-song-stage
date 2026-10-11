@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { Music4, Pencil, Plus, Search, Trash2, ListPlus } from "lucide-react";
+import { Music4, Pencil, Plus, Search, Trash2, ListPlus, Upload, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { deleteSong, listSongs, type SongRecord } from "@/lib/library.functions";
+import type { SongRecord } from "@/lib/library.functions";
+import { localDeleteSong, localListSongs } from "@/lib/local-db";
 import { buildSongSlides } from "@/lib/slides";
 import type { DeckMeta, ProjectionSlide, ThemeConfig } from "@/lib/projection";
 import { SongEditor } from "./SongEditor";
+import { ImportSongsModal } from "./ImportSongsModal";
+import { SearchLyricsModal } from "./SearchLyricsModal";
 
 interface SongsPanelProps {
   linesPerSlide: number;
@@ -24,17 +26,16 @@ export function SongsPanel({ linesPerSlide, theme, onOpenDeck, onAddToSetlist }:
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<SongRecord | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const queryClient = useQueryClient();
-  const fetchSongs = useServerFn(listSongs);
-  const removeSong = useServerFn(deleteSong);
-
   const { data: songs = [], isLoading } = useQuery({
     queryKey: ["songs"],
-    queryFn: () => fetchSongs(),
+    queryFn: () => localListSongs(),
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => removeSong({ data: { id } }),
+    mutationFn: (id: string) => localDeleteSong(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });
       toast.success("Música removida");
@@ -61,6 +62,22 @@ export function SongsPanel({ linesPerSlide, theme, onOpenDeck, onAddToSetlist }:
             className="pl-8"
           />
         </div>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => setSearchOpen(true)}
+          title="Buscar letras na internet"
+        >
+          <Globe className="size-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => setImportOpen(true)}
+          title="Importar músicas de arquivo"
+        >
+          <Upload className="size-4" />
+        </Button>
         <Button
           size="icon"
           onClick={() => {
@@ -160,6 +177,8 @@ export function SongsPanel({ linesPerSlide, theme, onOpenDeck, onAddToSetlist }:
       </ScrollArea>
 
       <SongEditor open={editorOpen} song={editing} baseTheme={theme} onOpenChange={setEditorOpen} />
+      <ImportSongsModal open={importOpen} onOpenChange={setImportOpen} />
+      <SearchLyricsModal open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );
 }
