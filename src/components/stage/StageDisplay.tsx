@@ -40,8 +40,8 @@ export function Clock({ scale = 1 }: { scale?: number }) {
   const now = useNow();
   return (
     <div
-      style={{ fontSize: `${Math.round(64 * scale)}px` }}
-      className="font-bold tabular-nums tracking-tight text-white"
+      style={{ fontSize: `clamp(1.8rem, ${3.5 * scale}vw, ${4.5 * scale}rem)` }}
+      className="font-bold tabular-nums tracking-tight text-white leading-none"
     >
       {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
     </div>
@@ -69,13 +69,13 @@ export function ServiceTimer({
     <div className="text-center">
       <div
         className="uppercase tracking-wider text-white/50 font-medium"
-        style={{ fontSize: `${Math.round((large ? 18 : 13) * scale)}px` }}
+        style={{ fontSize: large ? "clamp(0.7rem, 1vw, 1.1rem)" : "0.75rem" }}
       >
         Culto
       </div>
       <div
-        className="font-bold tabular-nums text-white"
-        style={{ fontSize: `${Math.round((large ? 54 : 36) * scale)}px` }}
+        className="font-bold tabular-nums text-white leading-none"
+        style={{ fontSize: large ? `clamp(1.8rem, ${3.2 * scale}vw, ${3.8 * scale}rem)` : "1.4rem" }}
       >
         {timeStr}
       </div>
@@ -102,15 +102,15 @@ export function BigItemTimer({ timer, scale = 1 }: { timer: NamedTimer; scale?: 
 
   return (
     <div
-      className="flex flex-col items-center justify-center rounded-2xl border border-white/10 px-6 py-4"
+      className="flex flex-col items-center justify-center rounded-2xl border border-white/10 px-4 py-2"
       style={{
         background: "linear-gradient(135deg, #0f1117 0%, #1a1d26 100%)",
-        boxShadow: `0 0 32px ${glowColor}, 0 2px 12px rgba(0,0,0,0.6)`,
+        boxShadow: `0 0 24px ${glowColor}, 0 2px 10px rgba(0,0,0,0.6)`,
       }}
     >
       <div
-        className="mb-1 max-w-full truncate font-medium uppercase tracking-widest text-white/60"
-        style={{ fontSize: `${Math.round(20 * scale)}px` }}
+        className="mb-0.5 max-w-full truncate font-medium uppercase tracking-widest text-white/60"
+        style={{ fontSize: `clamp(0.7rem, ${1.2 * scale}vw, 1.2rem)` }}
       >
         {timer.name}
       </div>
@@ -120,9 +120,9 @@ export function BigItemTimer({ timer, scale = 1 }: { timer: NamedTimer; scale?: 
           late && "animate-pulse",
         )}
         style={{
-          fontSize: `${Math.round(84 * scale)}px`,
+          fontSize: `clamp(2.5rem, ${5.5 * scale}vw, ${6 * scale}rem)`,
           color: timeColor,
-          textShadow: `0 0 40px ${glowColor}, 0 2px 8px rgba(0,0,0,0.5)`,
+          textShadow: `0 0 35px ${glowColor}, 0 2px 8px rgba(0,0,0,0.5)`,
           letterSpacing: "-0.03em",
         }}
       >
@@ -130,15 +130,15 @@ export function BigItemTimer({ timer, scale = 1 }: { timer: NamedTimer; scale?: 
       </div>
       {warning && !late ? (
         <div
-          className="mt-2 font-semibold uppercase tracking-widest text-yellow-400/80"
-          style={{ fontSize: `${Math.round(15 * scale)}px` }}
+          className="mt-1 font-semibold uppercase tracking-widest text-yellow-400/80"
+          style={{ fontSize: `clamp(0.65rem, ${0.9 * scale}vw, 0.95rem)` }}
         >
           Encerramento em breve
         </div>
       ) : late ? (
         <div
-          className="mt-2 font-semibold uppercase tracking-widest text-red-400/80 animate-pulse"
-          style={{ fontSize: `${Math.round(15 * scale)}px` }}
+          className="mt-1 font-semibold uppercase tracking-widest text-red-400/80 animate-pulse"
+          style={{ fontSize: `clamp(0.65rem, ${0.9 * scale}vw, 0.95rem)` }}
         >
           Tempo excedido
         </div>
@@ -150,20 +150,17 @@ export function BigItemTimer({ timer, scale = 1 }: { timer: NamedTimer; scale?: 
 // ─── Big Text Overlay ─────────────────────────────────────────────────────────
 
 export function BigTextOverlay({ text }: { text: string }) {
-  const len = text.length;
-  const fontSize = len > 140 ? "52px" : len > 80 ? "70px" : len > 35 ? "95px" : "125px";
-
   return (
     <div
-      className="absolute inset-0 z-40 flex h-full w-full items-center justify-center p-16"
+      className="absolute inset-0 z-40 flex h-full w-full items-center justify-center p-8 md:p-14"
       style={{
         background: "radial-gradient(ellipse at center, #0f172a 0%, #050709 100%)",
       }}
     >
       <p
-        className="text-center font-bold text-white whitespace-pre-wrap max-w-[90%]"
+        className="text-center font-bold text-white whitespace-pre-wrap max-w-[95%] leading-tight"
         style={{
-          fontSize,
+          fontSize: "clamp(2.5rem, 7vw, 9rem)",
           textShadow: "0 0 80px rgba(99,102,241,0.5), 0 4px 32px rgba(0,0,0,0.8)",
           letterSpacing: "-0.02em",
           lineHeight: 1.15,
@@ -175,7 +172,7 @@ export function BigTextOverlay({ text }: { text: string }) {
   );
 }
 
-// ─── Stage Traditional View ───────────────────────────────────────────────────
+// ─── Stage Traditional View (Fluida e sem barras pretas) ──────────────────────
 
 function StageTraditionalView({
   state,
@@ -195,31 +192,38 @@ function StageTraditionalView({
   const showHeader =
     state.stage.showClock || state.stage.showService || (state.stage.showTimers && activeTimers.length > 0);
 
+  const hasNextSection = Boolean(
+    isLyrics && nextSection && nextSection.lines && nextSection.lines.length > 0
+  );
+  const showNotes = Boolean(state.stage.showNotes && state.notes);
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       {/* Header: relógio + cronômetro de culto */}
       {showHeader ? (
         <header
-          className="flex shrink-0 items-center justify-between border-b border-white/10 px-8"
-          style={{ height: "100px", background: "linear-gradient(180deg, #111318 0%, #0a0c12 100%)" }}
+          className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 md:px-8 py-2 md:py-3"
+          style={{ minHeight: "4.5rem", background: "linear-gradient(180deg, #111318 0%, #0a0c12 100%)" }}
         >
           {state.stage.showClock ? <Clock /> : <span />}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             {state.stage.showService ? <ServiceTimer timers={state.timers} large /> : null}
           </div>
         </header>
       ) : null}
 
-      {/* Área Central */}
+      {/* Área Central — se ajusta em 100% da tela projetada */}
       <main
         className={cn(
-          "grid min-h-0 flex-1 gap-6 p-6",
-          isLyrics ? "grid-cols-[1.4fr_1fr]" : "grid-cols-1",
+          "grid min-h-0 flex-1 gap-3 md:gap-4 p-3 md:p-4",
+          hasNextSection || showNotes
+            ? "grid-cols-1 md:grid-cols-[1.3fr_1fr]"
+            : "grid-cols-1",
         )}
       >
         {/* Slide atual */}
-        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e15] shadow-2xl">
-          <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl">
+        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0c0e15] shadow-2xl">
+          <div className="relative flex flex-1 flex-col overflow-hidden rounded-lg">
             <SlideCanvas
               slide={state.slide}
               theme={theme}
@@ -230,78 +234,66 @@ function StageTraditionalView({
               media={media}
             />
             {state.freeze ? (
-              <div
-                className="absolute left-6 top-6 rounded-lg bg-yellow-500/95 px-4 py-2 font-black text-black shadow-lg"
-                style={{ fontSize: "20px" }}
-              >
+              <div className="absolute left-4 top-4 rounded bg-yellow-500/95 px-3 py-1 text-sm font-black text-black shadow-lg">
                 TELA CONGELADA
               </div>
             ) : null}
             {state.blackout ? (
-              <div
-                className="absolute inset-0 flex items-center justify-center bg-black/95 font-black text-white/50 tracking-widest"
-                style={{ fontSize: "48px" }}
-              >
+              <div className="absolute inset-0 flex items-center justify-center bg-black/95 text-3xl md:text-5xl font-black text-white/50 tracking-widest">
                 BLACKOUT
               </div>
             ) : null}
           </div>
-          <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-white/40" style={{ fontSize: "16px" }}>
+          <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-xs md:text-sm text-white/40">
             <span>Slide atual</span>
-            <span className="font-medium text-white/70">{state.slide?.label ?? state.slide?.title ?? "—"}</span>
+            <span className="font-semibold text-white/70">{state.slide?.label ?? state.slide?.title ?? "—"}</span>
           </div>
         </section>
 
         {/* Coluna direita: próxima parte ou observações */}
-        {isLyrics ? (
-          <aside className="flex min-h-0 flex-col gap-6">
-            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0e111a] shadow-2xl">
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 font-semibold uppercase tracking-wider text-white/40" style={{ fontSize: "16px" }}>
+        {hasNextSection ? (
+          <aside className="flex min-h-0 flex-col gap-3">
+            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0e111a] shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5 text-xs md:text-sm font-semibold uppercase tracking-wider text-white/40">
                 <span>Próxima parte</span>
                 <span className="text-primary font-bold">{nextSection?.label ?? "—"}</span>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 px-8 py-6 overflow-hidden">
-                {nextSection?.lines?.length ? (
-                  nextSection.lines.map((line: string, i: number) => (
-                    <p
-                      key={`${line}-${i}`}
-                      style={{ fontSize: "40px", lineHeight: 1.25 }}
-                      className="font-bold text-white/95 leading-tight"
-                    >
-                      {line}
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-center text-white/40" style={{ fontSize: "28px" }}>
-                    Fim da música
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 px-6 py-4 overflow-hidden">
+                {nextSection.lines.map((line: string, i: number) => (
+                  <p
+                    key={`${line}-${i}`}
+                    style={{ fontSize: "clamp(1.3rem, 2.8vw, 3rem)", lineHeight: 1.25 }}
+                    className="font-bold text-white/95 leading-tight"
+                  >
+                    {line}
                   </p>
-                )}
+                ))}
               </div>
               {nextSection?.songKey && nextSection.songKey !== state.songKey ? (
-                <div className="border-t border-white/10 px-5 py-3" style={{ fontSize: "18px" }}>
+                <div className="border-t border-white/10 px-4 py-2 text-xs md:text-sm">
                   Tom da próxima parte:{" "}
                   <span className="font-bold text-primary">{nextSection.songKey}</span>
                 </div>
               ) : null}
             </section>
 
-            {state.stage.showNotes && state.notes ? (
-              <section className="shrink-0 rounded-2xl border border-white/10 bg-[#0e111a] p-6">
-                <span className="font-semibold uppercase tracking-wider text-white/40" style={{ fontSize: "15px" }}>
+            {showNotes ? (
+              <section className="shrink-0 rounded-xl border border-white/10 bg-[#0e111a] p-4">
+                <span className="text-xs uppercase tracking-wider text-white/40 font-semibold">
                   Observações
                 </span>
-                <p className="mt-2 whitespace-pre-wrap leading-relaxed text-white/80" style={{ fontSize: "20px" }}>
+                <p className="mt-1 whitespace-pre-wrap text-sm md:text-base leading-relaxed text-white/80">
                   {state.notes}
                 </p>
               </section>
             ) : null}
           </aside>
-        ) : state.stage.showNotes && state.notes ? (
-          <section className="rounded-2xl border border-white/10 bg-[#0e111a] p-6">
-            <span className="font-semibold uppercase tracking-wider text-white/40" style={{ fontSize: "16px" }}>
+        ) : showNotes ? (
+          <section className="rounded-xl border border-white/10 bg-[#0e111a] p-5 flex flex-col justify-center">
+            <span className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-2">
               Observações
             </span>
-            <p className="mt-2 whitespace-pre-wrap leading-relaxed text-white/80" style={{ fontSize: "24px" }}>
+            <p className="whitespace-pre-wrap text-base md:text-lg leading-relaxed text-white/80">
               {state.notes}
             </p>
           </section>
@@ -311,12 +303,12 @@ function StageTraditionalView({
       {/* Footer: Timers dedicados */}
       {state.stage.showTimers && activeTimers.length > 0 ? (
         <footer
-          className="shrink-0 border-t border-white/10 px-6 py-4"
-          style={{ background: "#080a10", height: "180px" }}
+          className="shrink-0 border-t border-white/10 px-4 py-2.5"
+          style={{ background: "#080a10" }}
         >
           <div
             className={cn(
-              "grid h-full gap-6",
+              "grid gap-4",
               activeTimers.length === 1 && "grid-cols-1",
               activeTimers.length === 2 && "grid-cols-2",
               activeTimers.length >= 3 && "grid-cols-3",
@@ -395,7 +387,7 @@ function StageCustomLayoutView({
             <div
               key={widget.id}
               style={slideStyle}
-              className="relative flex flex-col rounded-2xl border border-white/10 bg-[#0c0e15] overflow-hidden shadow-2xl"
+              className="relative flex flex-col rounded-xl border border-white/10 bg-[#0c0e15] overflow-hidden shadow-2xl"
             >
               <SlideCanvas
                 slide={state.slide}
@@ -407,18 +399,12 @@ function StageCustomLayoutView({
                 media={media}
               />
               {state.freeze ? (
-                <div
-                  className="absolute left-4 top-4 rounded-md bg-yellow-500/90 px-3 py-1 font-bold text-black shadow"
-                  style={{ fontSize: "16px" }}
-                >
+                <div className="absolute left-3 top-3 rounded bg-yellow-500/90 px-2 py-0.5 text-xs font-bold text-black shadow">
                   CONGELADO
                 </div>
               ) : null}
               {state.blackout ? (
-                <div
-                  className="absolute inset-0 flex items-center justify-center bg-black/95 font-bold text-white/50"
-                  style={{ fontSize: "36px" }}
-                >
+                <div className="absolute inset-0 flex items-center justify-center bg-black/95 text-2xl font-bold text-white/50">
                   BLACKOUT
                 </div>
               ) : null}
@@ -432,20 +418,20 @@ function StageCustomLayoutView({
             <div
               key={widget.id}
               style={style}
-              className="flex flex-col rounded-2xl border border-white/10 bg-[#0e111a] p-6 overflow-hidden shadow-2xl"
+              className="flex flex-col rounded-xl border border-white/10 bg-[#0e111a] p-4 overflow-hidden shadow-2xl"
             >
               <div
-                className="mb-2 uppercase tracking-wider text-white/40 font-semibold"
-                style={{ fontSize: `${Math.round(15 * (widget.scale ?? 1))}px` }}
+                className="mb-1 uppercase tracking-wider text-white/40 font-semibold"
+                style={{ fontSize: `clamp(0.65rem, ${1.2 * (widget.scale ?? 1)}vw, 1.1rem)` }}
               >
                 Próxima parte
               </div>
-              <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
+              <div className="flex flex-1 flex-col justify-center gap-2 overflow-hidden">
                 {nextSection.lines.map((line: string, i: number) => (
                   <p
                     key={`${line}-${i}`}
                     className="font-bold leading-tight text-white/95"
-                    style={{ fontSize: `${Math.round(38 * (widget.scale ?? 1))}px` }}
+                    style={{ fontSize: `clamp(1rem, ${2.5 * (widget.scale ?? 1)}vw, 3rem)` }}
                   >
                     {line}
                   </p>
@@ -468,7 +454,7 @@ function StageCustomLayoutView({
                 display: "grid",
                 gridTemplateColumns: `repeat(${Math.min(timersToShow.length, 3)}, 1fr)`,
               }}
-              className="gap-4 p-2"
+              className="gap-3 p-1"
             >
               {timersToShow.map((t) => (
                 <BigItemTimer key={t.id} timer={t} scale={widget.scale ?? 1} />
@@ -484,11 +470,11 @@ function StageCustomLayoutView({
               key={widget.id}
               style={{ ...style, backgroundColor: "#dc2626" }}
               className={cn(
-                "flex items-center justify-center font-black uppercase tracking-wider text-white px-6 shadow-2xl",
+                "flex items-center justify-center font-black uppercase tracking-wider text-white px-4 shadow-2xl",
                 state.stage.blink && "animate-pulse",
               )}
             >
-              <span style={{ fontSize: `${Math.round(38 * (widget.scale ?? 1))}px` }}>
+              <span style={{ fontSize: `clamp(1rem, ${2.5 * (widget.scale ?? 1)}vw, 2.5rem)` }}>
                 ⚠️ {state.stage.message} ⚠️
               </span>
             </div>
@@ -501,17 +487,17 @@ function StageCustomLayoutView({
             <div
               key={widget.id}
               style={style}
-              className="rounded-2xl border border-white/10 bg-[#0e111a] p-6 overflow-auto shadow-2xl"
+              className="rounded-xl border border-white/10 bg-[#0e111a] p-4 overflow-auto shadow-2xl"
             >
               <span
                 className="font-semibold uppercase tracking-wider text-white/40"
-                style={{ fontSize: `${Math.round(15 * (widget.scale ?? 1))}px` }}
+                style={{ fontSize: `clamp(0.65rem, ${1 * (widget.scale ?? 1)}vw, 1rem)` }}
               >
                 Observações
               </span>
               <p
-                className="mt-2 whitespace-pre-wrap leading-relaxed text-white/80"
-                style={{ fontSize: `${Math.round(20 * (widget.scale ?? 1))}px` }}
+                className="mt-1 whitespace-pre-wrap leading-relaxed text-white/80"
+                style={{ fontSize: `clamp(0.8rem, ${1.4 * (widget.scale ?? 1)}vw, 1.4rem)` }}
               >
                 {state.notes}
               </p>
@@ -522,11 +508,11 @@ function StageCustomLayoutView({
         if (widget.kind === "bigText") {
           if (!showBigText || !bigText) return null;
           return (
-            <div key={widget.id} style={style} className="flex items-center justify-center p-8">
+            <div key={widget.id} style={style} className="flex items-center justify-center p-6">
               <p
                 className="text-center font-bold text-white whitespace-pre-wrap"
                 style={{
-                  fontSize: `${Math.round(80 * (widget.scale ?? 1))}px`,
+                  fontSize: `clamp(2rem, ${6 * (widget.scale ?? 1)}vw, 7rem)`,
                   textShadow: "0 4px 28px rgba(0,0,0,0.9)",
                 }}
               >
@@ -542,7 +528,7 @@ function StageCustomLayoutView({
   );
 }
 
-// ─── StageDisplay Component (Full 1920x1080 Stage Monitor) ────────────────────
+// ─── StageDisplay Component (Fluido para monitor e preview) ───────────────────
 
 export interface StageDisplayProps {
   state: LiveState;
@@ -567,13 +553,13 @@ export function StageDisplay({ state, media = true }: StageDisplayProps) {
     state.stage.showMessage && state.stage.message ? (
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 z-50 flex items-center justify-center border-b-4 border-white px-8 py-5 text-center font-black uppercase tracking-wider shadow-2xl transition-all",
+          "absolute top-0 left-0 right-0 z-50 flex items-center justify-center border-b-4 border-white px-6 py-3 md:py-4 text-center font-black uppercase tracking-wider shadow-2xl transition-all",
           state.stage.blink && "animate-pulse",
         )}
         style={{
           backgroundColor: "#dc2626",
           color: "#ffffff",
-          fontSize: "44px",
+          fontSize: "clamp(1.3rem, 3.2vw, 3rem)",
           boxShadow: "0 10px 40px rgba(0,0,0,0.85)",
         }}
       >
@@ -585,7 +571,7 @@ export function StageDisplay({ state, media = true }: StageDisplayProps) {
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden select-none"
+      className="relative h-full w-full overflow-hidden select-none flex flex-col"
       style={{
         backgroundColor: "#080a10",
         color: "#e5e7eb",
@@ -621,7 +607,7 @@ export function StageDisplay({ state, media = true }: StageDisplayProps) {
   );
 }
 
-// ─── StagePreview Component (Scales 1920x1080 into any Container) ────────────
+// ─── StagePreview Component (Renderiza StageDisplay perfeitamente no Studio) ──
 
 export interface StagePreviewProps {
   state: LiveState;
@@ -640,9 +626,9 @@ export function StagePreview({ state, className, media = false }: StagePreviewPr
     const updateScale = () => {
       const rect = el.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        // Proporção 16:9 em relação a 1920x1080
-        const scaleX = rect.width / 1920;
-        const scaleY = rect.height / 1080;
+        // Usa 1600x900 de referência para miniatura de estúdio
+        const scaleX = rect.width / 1600;
+        const scaleY = rect.height / 900;
         setScale(Math.min(scaleX, scaleY));
       }
     };
@@ -666,8 +652,8 @@ export function StagePreview({ state, className, media = false }: StagePreviewPr
       <div
         className="pointer-events-none absolute"
         style={{
-          width: 1920,
-          height: 1080,
+          width: 1600,
+          height: 900,
           left: "50%",
           top: "50%",
           transform: `translate(-50%, -50%) scale(${scale})`,
